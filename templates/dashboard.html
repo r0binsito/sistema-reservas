@@ -16,8 +16,8 @@
         <a href="{{ url_for('ver_clientes') }}" class="btn btn-primary">👥 Ver clientes</a>
         <a href="{{ url_for('ver_reservas') }}" class="btn btn-primary">📋 Ver agenda</a>
         <a href="{{ url_for('ver_servicios') }}" class="btn btn-success">✂️ Mis servicios</a>
-        <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}" class="btn btn-primary">📅 Nueva reserva</a>
         <a href="{{ url_for('configurar_horario') }}" class="btn btn-success">🕐 Configurar horario</a>
+        <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}" class="btn btn-primary">📅 Nueva reserva</a>
     </div>
 </div>
 {% endblock %}

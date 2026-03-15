@@ -21,8 +21,8 @@
             <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
             {% endif %}
             <a href="{{ url_for('ver_servicios') }}">Servicios</a>
-            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
             <a href="{{ url_for('configurar_horario') }}">Horario</a>
+            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
             <a href="{{ url_for('logout') }}">Cerrar sesión</a>
             {% else %}
             <a href="{{ url_for('login') }}">Iniciar sesión</a>
