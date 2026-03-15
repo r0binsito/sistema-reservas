@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block titulo %}Servicios — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>✂️ Servicios de {{ current_user.negocio.nombre }}</h2>
+        <a href="{{ url_for('nuevo_servicio') }}" class="btn btn-success">➕ Nuevo servicio</a>
+    </div>
+
+    {% if servicios %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Duración</th>
+                <th>Precio</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in servicios %}
+            <tr>
+                <td>{{ s.nombre }}</td>
+                <td>{{ s.duracion_min }} min</td>
+                <td>{{ '%.2f' % s.precio if s.precio else '—' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('eliminar_servicio', servicio_id=s.id) }}">
+                        <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('¿Eliminar este servicio?')">
+                            Eliminar
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #888;">No tienes servicios aún. Agrega tu primer servicio.</p>
+    {% endif %}
+</div>
+{% endblock %}

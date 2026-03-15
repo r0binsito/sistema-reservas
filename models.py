@@ -10,6 +10,7 @@ class Negocio(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     slug = db.Column(db.String(100), unique=True, nullable=True)
     clientes = db.relationship("Cliente", backref="negocio", lazy=True)
+    servicios = db.relationship("Servicio", backref="negocio", lazy=True)
 
 class Cliente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,3 +41,11 @@ class Horario(db.Model):
     dia_semana = db.Column(db.Integer, nullable=False)  # 0=Lunes, 6=Domingo
     hora_apertura = db.Column(db.Time, nullable=False)
     hora_cierre = db.Column(db.Time, nullable=False)
+
+class Servicio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    duracion_min = db.Column(db.Integer, nullable=False, default=60)
+    precio = db.Column(db.Float, nullable=True)
+    activo = db.Column(db.Boolean, default=True)

@@ -10,32 +10,35 @@
 
 <body>
 
+    {% block navbar %}
     <nav class="navbar">
         <div class="nav-brand">📅 Reserfy</div>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('ver_clientes') }}">Clientes</a>
-                <a href="{{ url_for('ver_reservas') }}">Agenda</a>
-                {% if current_user.negocio.slug %}
-                    <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
-                {% endif %}
-                <a href="{{ url_for('configurar_horario') }}">Horario</a>
-                <a href="{{ url_for('logout') }}">Cerrar sesión</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('ver_clientes') }}">Clientes</a>
+            {% if current_user.negocio.slug %}
+            <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
+            {% endif %}
+            <a href="{{ url_for('ver_servicios') }}">Servicios</a>
+            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
+            <a href="{{ url_for('configurar_horario') }}">Horario</a>
+            <a href="{{ url_for('logout') }}">Cerrar sesión</a>
             {% else %}
-                <a href="{{ url_for('login') }}">Iniciar sesión</a>
-                <a href="{{ url_for('registro') }}">Registrarse</a>
+            <a href="{{ url_for('login') }}">Iniciar sesión</a>
+            <a href="{{ url_for('registro') }}">Registrarse</a>
             {% endif %}
         </div>
     </nav>
+    {% endblock %}
 
     <main class="contenedor">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alerta alerta-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alerta alerta-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
 
         {% block contenido %}{% endblock %}

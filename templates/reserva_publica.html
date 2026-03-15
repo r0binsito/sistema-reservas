@@ -3,6 +3,16 @@
 {% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
 
 {% block contenido %}
+
+{% block navbar %}
+<nav class="navbar">
+    <div class="nav-brand">📅 Reserfy</div>
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" style="color: #ecf0f1;">¿Tienes un negocio? Regístrate gratis</a>
+    </div>
+</nav>
+{% endblock %}
+
 <div class="card" style="max-width: 600px; margin: 0 auto;">
     <h2>📅 Reservar en {{ negocio.nombre }}</h2>
 
@@ -29,11 +39,12 @@
             <label>Servicio</label>
             <select name="servicio"
                 style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                <option value="Corte de cabello" {{ 'selected' if request.form.get('servicio')=='Corte de cabello' }}>
-                    Corte de cabello</option>
-                <option value="Barba" {{ 'selected' if request.form.get('servicio')=='Barba' }}>Barba</option>
-                <option value="Corte + Barba" {{ 'selected' if request.form.get('servicio')=='Corte + Barba' }}>Corte +
-                    Barba</option>
+                {% for s in servicios %}
+                <option value="{{ s.nombre }}" {{ 'selected' if request.form.get('servicio')==s.nombre }}>
+                    {{ s.nombre }} — {{ s.duracion_min }} min
+                    {% if s.precio %} — ${{ '%.2f' % s.precio }}{% endif %}
+                </option>
+                {% endfor %}
             </select>
         </div>
         <div class="form-grupo">

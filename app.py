@@ -1,7 +1,7 @@
 from flask import Flask, request, redirect, url_for, render_template_string
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, Negocio, Cliente, Reserva, Usuario, Horario
+from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
 from datetime import datetime, time, date, timedelta
 from flask_mail import Mail, Message
 import os
@@ -44,6 +44,14 @@ def generar_slug(nombre):
     slug = re.sub(r'[ñ]', 'n', slug)
     slug = re.sub(r'[^a-z0-9\s-]', '', slug)
     slug = re.sub(r'\s+', '-', slug.strip())
+
+    # Si el slug ya existe, agrega un número al final
+    slug_base = slug
+    contador = 1
+    while Negocio.query.filter_by(slug=slug).first():
+        slug = f"{slug_base}-{contador}"
+        contador += 1
+
     return slug
 
 # --- Index ---
@@ -51,13 +59,16 @@ def generar_slug(nombre):
 def index():
     return render_template("index.html")
 
-# --- Registro ---
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if request.method == "POST":
         nombre = request.form["nombre"]
         email = request.form["email"]
         password = request.form["password"]
+
+        # Verificar si el email ya existe
+        if Negocio.query.filter_by(email=email).first():
+            return render_template("registro.html", error="Ya existe un negocio con ese email.")
 
         negocio = Negocio(nombre=nombre, email=email)
         negocio.slug = generar_slug(nombre)
@@ -139,6 +150,43 @@ def nuevo_cliente():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+# --- Ver y gestionar servicios ---
+@app.route("/servicios")
+@login_required
+def ver_servicios():
+    servicios = Servicio.query.filter_by(
+        negocio_id=current_user.negocio_id
+    ).all()
+    return render_template("servicios.html", servicios=servicios)
+
+# --- Agregar servicio ---
+@app.route("/servicios/nuevo", methods=["GET", "POST"])
+@login_required
+def nuevo_servicio():
+    if request.method == "POST":
+        servicio = Servicio(
+            nombre=request.form["nombre"],
+            duracion_min=int(request.form["duracion_min"]),
+            precio=float(request.form["precio"]) if request.form["precio"] else None,
+            negocio_id=current_user.negocio_id
+        )
+        db.session.add(servicio)
+        db.session.commit()
+        return redirect(url_for("ver_servicios"))
+    return render_template("nuevo_servicio.html")
+
+# --- Eliminar servicio ---
+@app.route("/servicios/eliminar/<int:servicio_id>", methods=["POST"])
+@login_required
+def eliminar_servicio(servicio_id):
+    servicio = Servicio.query.filter_by(
+        id=servicio_id,
+        negocio_id=current_user.negocio_id
+    ).first_or_404()
+    db.session.delete(servicio)
+    db.session.commit()
+    return redirect(url_for("ver_servicios"))
 
 # --- Configurar horario del negocio ---
 @app.route("/horario/configurar", methods=["GET", "POST"])
@@ -283,14 +331,20 @@ def reserva_publica(slug):
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
+    servicios = Servicio.query.filter_by(
+    negocio_id=negocio.id,
+    activo=True
+    ).all()
+
     return render_template(
         "reserva_publica.html",
         negocio=negocio,
         slots=slots,
         mensaje=mensaje,
         fecha_seleccionada=fecha_seleccionada,
-        servicio_seleccionado=servicio_seleccionado
-    )
+        servicio_seleccionado=servicio_seleccionado,
+        servicios=servicios
+)
 
 # --- Ver todas las reservas del negocio ---
 @app.route("/reservas")
