@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block titulo %}Página no encontrada — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+    <h1 style="font-size: 4rem; color: #3498db; margin-bottom: 0;">404</h1>
+    <h2 style="color: #2c3e50; margin-bottom: 1rem;">Página no encontrada</h2>
+    <p style="color: #888; margin-bottom: 2rem;">
+        La página que buscas no existe o fue movida.
+    </p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">Volver al inicio</a>
+</div>
+{% endblock %}

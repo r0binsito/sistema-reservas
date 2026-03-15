@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block titulo %}Sistema de Reservas{% endblock %}</title>
+    <title>{% block titulo %}Reserfy{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
     <nav class="navbar">
@@ -14,7 +16,10 @@
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('ver_clientes') }}">Clientes</a>
-                <a href="{{ url_for('reservar') }}">Reservas</a>
+                <a href="{{ url_for('ver_reservas') }}">Agenda</a>
+                {% if current_user.negocio.slug %}
+                    <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
+                {% endif %}
                 <a href="{{ url_for('configurar_horario') }}">Horario</a>
                 <a href="{{ url_for('logout') }}">Cerrar sesión</a>
             {% else %}
@@ -41,4 +46,5 @@
     </footer>
 
 </body>
+
 </html>

@@ -7,6 +7,7 @@ from flask_mail import Mail, Message
 import os
 from dotenv import load_dotenv
 from flask import Flask, request, redirect, url_for, render_template
+import re
 
 load_dotenv()
 
@@ -33,6 +34,23 @@ login_manager.login_view = "login"
 def load_user(user_id):
     return Usuario.query.get(int(user_id))
 
+def generar_slug(nombre):
+    slug = nombre.lower()
+    slug = re.sub(r'[áàäâ]', 'a', slug)
+    slug = re.sub(r'[éèëê]', 'e', slug)
+    slug = re.sub(r'[íìïî]', 'i', slug)
+    slug = re.sub(r'[óòöô]', 'o', slug)
+    slug = re.sub(r'[úùüû]', 'u', slug)
+    slug = re.sub(r'[ñ]', 'n', slug)
+    slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+    slug = re.sub(r'\s+', '-', slug.strip())
+    return slug
+
+# --- Index ---
+@app.route("/")
+def index():
+    return render_template("index.html")
+
 # --- Registro ---
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
@@ -42,6 +60,7 @@ def registro():
         password = request.form["password"]
 
         negocio = Negocio(nombre=nombre, email=email)
+        negocio.slug = generar_slug(nombre)
         db.session.add(negocio)
         db.session.commit()
 
@@ -201,49 +220,110 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
     mail.send(msg)
 
 # --- Página pública de reservas ---
-@app.route("/reservar", methods=["GET", "POST"])
-@login_required
-def reservar():
+@app.route("/b/<slug>", methods=["GET", "POST"])
+def reserva_publica(slug):
+    negocio = Negocio.query.filter_by(slug=slug).first_or_404()
     mensaje = ""
     slots = []
     fecha_seleccionada = None
+    servicio_seleccionado = None
 
     if request.method == "POST" and "fecha" in request.form and "hora" not in request.form:
         fecha_seleccionada = datetime.strptime(request.form["fecha"], "%Y-%m-%d").date()
-        slots = obtener_slots_disponibles(current_user.negocio_id, fecha_seleccionada)
+        servicio_seleccionado = request.form.get("servicio")
+        slots = obtener_slots_disponibles(negocio.id, fecha_seleccionada)
 
     elif request.method == "POST" and "hora" in request.form:
         hora_str = request.form.get("hora", "").strip()
+        nombre_cliente = request.form.get("nombre_cliente")
+        email_cliente = request.form.get("email_cliente")
+        servicio_seleccionado = request.form.get("servicio")
+
         try:
             fecha_hora = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
+
+            # Buscar o crear el cliente
+            cliente = Cliente.query.filter_by(
+                email=email_cliente,
+                negocio_id=negocio.id
+            ).first()
+
+            if not cliente:
+                cliente = Cliente(
+                    nombre=nombre_cliente,
+                    telefono=request.form.get("telefono_cliente", ""),
+                    email=email_cliente,
+                    negocio_id=negocio.id
+                )
+                db.session.add(cliente)
+                db.session.commit()
+
             reserva = Reserva(
                 fecha_hora=fecha_hora,
-                servicio=request.form["servicio"],
-                negocio_id=current_user.negocio_id,
-                cliente_id=1
+                servicio=servicio_seleccionado,
+                negocio_id=negocio.id,
+                cliente_id=cliente.id
             )
             db.session.add(reserva)
             db.session.commit()
+
             try:
                 enviar_confirmacion(
-                    email_cliente=current_user.email,
-                    nombre_cliente=current_user.negocio.nombre,
-                    servicio=request.form["servicio"],
+                    email_cliente=email_cliente,
+                    nombre_cliente=nombre_cliente,
+                    servicio=servicio_seleccionado,
                     fecha_hora=fecha_hora,
-                    nombre_negocio=current_user.negocio.nombre
+                    nombre_negocio=negocio.nombre
                 )
-                mensaje = f"✅ Reserva confirmada para el {fecha_hora.strftime('%d/%m/%Y a las %H:%M')} — Email enviado"
-            except Exception as e:
-                mensaje = f"✅ Reserva guardada, pero el email no se pudo enviar: {str(e)}"
+            except Exception:
+                pass
+
+            mensaje = f"✅ Reserva confirmada para el {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}"
+
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
-    return render_template("reservar.html", slots=slots, mensaje=mensaje, fecha_seleccionada=fecha_seleccionada)
+    return render_template(
+        "reserva_publica.html",
+        negocio=negocio,
+        slots=slots,
+        mensaje=mensaje,
+        fecha_seleccionada=fecha_seleccionada,
+        servicio_seleccionado=servicio_seleccionado
+    )
+
+# --- Ver todas las reservas del negocio ---
+@app.route("/reservas")
+@login_required
+def ver_reservas():
+    reservas = Reserva.query.filter_by(
+        negocio_id=current_user.negocio_id
+    ).order_by(Reserva.fecha_hora).all()
+    return render_template("reservas.html", reservas=reservas)
+
+# --- Cancelar una reserva ---
+@app.route("/reservas/cancelar/<int:reserva_id>", methods=["POST"])
+@login_required
+def cancelar_reserva(reserva_id):
+    reserva = Reserva.query.filter_by(
+        id=reserva_id,
+        negocio_id=current_user.negocio_id
+    ).first_or_404()
+    reserva.estado = "cancelada"
+    db.session.commit()
+    return redirect(url_for("ver_reservas"))
 
 with app.app_context():
     db.create_all()
 
+# --- Manejadores de error ---
+@app.errorhandler(404)
+def pagina_no_encontrada(e):
+    return render_template("404.html"), 404
+
+@app.errorhandler(500)
+def error_servidor(e):
+    return render_template("500.html"), 500
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)

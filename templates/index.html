@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reserfy — Sistema de reservas para tu negocio{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 600px; margin: 0 auto; text-align: center;">
+    <h1 style="color: #2c3e50; margin-bottom: 1rem;">📅 Reserfy</h1>
+    <p style="color: #666; font-size: 1.1rem; margin-bottom: 2rem;">
+        El sistema de reservas más simple para tu negocio.
+        Sin complicaciones, sin papel, sin llamadas.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{{ url_for('registro') }}" class="btn btn-primary">Registra tu negocio gratis</a>
+        <a href="{{ url_for('login') }}" class="btn" style="color: #3498db;">Iniciar sesión</a>
+    </div>
+</div>
+{% endblock %}

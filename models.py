@@ -8,12 +8,14 @@ class Negocio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=True)
     clientes = db.relationship("Cliente", backref="negocio", lazy=True)
 
 class Cliente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     telefono = db.Column(db.String(20))
+    email = db.Column(db.String(120))
     negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False)
     reservas = db.relationship("Reserva", backref="cliente", lazy=True)
 

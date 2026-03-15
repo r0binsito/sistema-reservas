@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reservas — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <h2>📅 Reservas de {{ current_user.negocio.nombre }}</h2>
+
+    {% if reservas %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Servicio</th>
+                <th>Fecha y hora</th>
+                <th>Estado</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in reservas %}
+            <tr>
+                <td>{{ r.cliente.nombre }}</td>
+                <td>{{ r.servicio }}</td>
+                <td>{{ r.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>
+                    {% if r.estado == 'cancelada' %}
+                        <span style="color: #e74c3c; font-weight: 500;">Cancelada</span>
+                    {% else %}
+                        <span style="color: #27ae60; font-weight: 500;">Confirmada</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.estado != 'cancelada' %}
+                    <form method="POST" action="{{ url_for('cancelar_reserva', reserva_id=r.id) }}">
+                        <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('¿Seguro que deseas cancelar esta reserva?')">
+                            Cancelar
+                        </button>
+                    </form>
+                    {% else %}
+                        <span style="color: #aaa;">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #888;">No tienes reservas aún.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -4,8 +4,10 @@
 
 {% block contenido %}
 <div class="card">
-    <h2>👥 Clientes de {{ current_user.negocio.nombre }}</h2>
-    <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success" style="margin-bottom: 1.5rem; display: inline-block;">➕ Nuevo cliente</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>👥 Clientes de {{ current_user.negocio.nombre }}</h2>
+        <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success">➕ Agregar manualmente</a>
+    </div>
 
     {% if clientes %}
     <table class="tabla">
@@ -13,19 +15,21 @@
             <tr>
                 <th>Nombre</th>
                 <th>Teléfono</th>
+                <th>Email</th>
             </tr>
         </thead>
         <tbody>
             {% for cliente in clientes %}
             <tr>
                 <td>{{ cliente.nombre }}</td>
-                <td>{{ cliente.telefono }}</td>
+                <td>{{ cliente.telefono or '—' }}</td>
+                <td>{{ cliente.email or '—' }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p style="color: #888;">No tienes clientes aún.</p>
+    <p style="color: #888;">Aún no tienes clientes. Comparte tu link público para recibir reservas.</p>
     {% endif %}
 </div>
 {% endblock %}
