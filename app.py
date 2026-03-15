@@ -3,7 +3,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
 from datetime import datetime, time, date, timedelta
-from flask_mail import Mail, Message
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SGMail
 import os
 from dotenv import load_dotenv
 from flask import Flask, request, redirect, url_for, render_template
@@ -15,14 +16,6 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///reservas.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "clave-temporal")
-app.config["MAIL_SERVER"] = "smtp.gmail.com"
-app.config["MAIL_PORT"] = 587
-app.config["MAIL_USE_TLS"] = True
-app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
-app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_USERNAME")
-
-mail = Mail(app)
 
 db.init_app(app)
 
@@ -249,59 +242,74 @@ def obtener_slots_disponibles(negocio_id, fecha):
 
     return slots_disponibles
 
+MAIL_SENDER = os.getenv("MAIL_DEFAULT_SENDER")
+
+def enviar_email(destinatario, asunto, contenido_html):
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        mensaje = SGMail(
+            from_email=MAIL_SENDER,
+            to_emails=destinatario,
+            subject=asunto,
+            html_content=contenido_html
+        )
+        sg.send(mensaje)
+    except Exception as e:
+        print(f"Error enviando email: {e}")
+
 def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio):
-    msg = Message(
-        subject=f"Reserva confirmada — {nombre_negocio}",
-        recipients=[email_cliente]
+    enviar_email(
+        destinatario=email_cliente,
+        asunto=f"Reserva confirmada — {nombre_negocio}",
+        contenido_html=f"""
+            <h2>¡Tu reserva está confirmada!</h2>
+            <p>Hola <strong>{nombre_cliente}</strong>,</p>
+            <p>Tu cita ha sido agendada con éxito:</p>
+            <ul>
+                <li><strong>Negocio:</strong> {nombre_negocio}</li>
+                <li><strong>Servicio:</strong> {servicio}</li>
+                <li><strong>Fecha y hora:</strong> {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+            </ul>
+            <p>Si necesitas cancelar, responde a este correo.</p>
+        """
     )
-    msg.html = f"""
-        <h2>¡Tu reserva está confirmada!</h2>
-        <p>Hola <strong>{nombre_cliente}</strong>,</p>
-        <p>Tu cita ha sido agendada con éxito:</p>
-        <ul>
-            <li><strong>Negocio:</strong> {nombre_negocio}</li>
-            <li><strong>Servicio:</strong> {servicio}</li>
-            <li><strong>Fecha y hora:</strong> {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-        </ul>
-        <p>Si necesitas cancelar, responde a este correo.</p>
-    """
-    mail.send(msg)
-    
-def enviar_cancelacion(reserva):
+
+def enviar_cancelacion_emails(cliente, negocio, reserva):
+    if not cliente or not cliente.email:
+        return
+
     # Email al cliente
-    msg_cliente = Message(
-        subject=f"Reserva cancelada — {reserva.negocio.nombre}",
-        recipients=[reserva.cliente.email]
+    enviar_email(
+        destinatario=cliente.email,
+        asunto=f"Reserva cancelada — {negocio.nombre}",
+        contenido_html=f"""
+            <h2>Tu reserva fue cancelada</h2>
+            <p>Hola <strong>{cliente.nombre}</strong>,</p>
+            <p>Tu reserva ha sido cancelada:</p>
+            <ul>
+                <li><strong>Negocio:</strong> {negocio.nombre}</li>
+                <li><strong>Servicio:</strong> {reserva.servicio}</li>
+                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+            </ul>
+            <p>Puedes hacer una nueva reserva en cualquier momento.</p>
+        """
     )
-    msg_cliente.html = f"""
-        <h2>Tu reserva fue cancelada</h2>
-        <p>Hola <strong>{reserva.cliente.nombre}</strong>,</p>
-        <p>Lamentamos informarte que tu reserva ha sido cancelada:</p>
-        <ul>
-            <li><strong>Negocio:</strong> {reserva.negocio.nombre}</li>
-            <li><strong>Servicio:</strong> {reserva.servicio}</li>
-            <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-        </ul>
-        <p>Puedes hacer una nueva reserva en cualquier momento.</p>
-    """
-    mail.send(msg_cliente)
 
     # Email al negocio
-    msg_negocio = Message(
-        subject=f"Reserva cancelada — {reserva.cliente.nombre}",
-        recipients=[reserva.negocio.email]
+    enviar_email(
+        destinatario=negocio.email,
+        asunto=f"Reserva cancelada — {cliente.nombre}",
+        contenido_html=f"""
+            <h2>Una reserva fue cancelada</h2>
+            <p>La siguiente reserva ha sido cancelada:</p>
+            <ul>
+                <li><strong>Cliente:</strong> {cliente.nombre}</li>
+                <li><strong>Email:</strong> {cliente.email}</li>
+                <li><strong>Servicio:</strong> {reserva.servicio}</li>
+                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+            </ul>
+        """
     )
-    msg_negocio.html = f"""
-        <h2>Una reserva fue cancelada</h2>
-        <p>La siguiente reserva ha sido cancelada:</p>
-        <ul>
-            <li><strong>Cliente:</strong> {reserva.cliente.nombre}</li>
-            <li><strong>Email:</strong> {reserva.cliente.email}</li>
-            <li><strong>Servicio:</strong> {reserva.servicio}</li>
-            <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-        </ul>
-    """
-    mail.send(msg_negocio)
     
 
 # --- Página pública de reservas ---
@@ -399,7 +407,6 @@ def cancelar_reserva(reserva_id):
         negocio_id=current_user.negocio_id
     ).first_or_404()
 
-    # Cargar relaciones explícitamente antes de cambiar el estado
     cliente = Cliente.query.get(reserva.cliente_id)
     negocio = Negocio.query.get(reserva.negocio_id)
 
@@ -407,42 +414,7 @@ def cancelar_reserva(reserva_id):
     db.session.commit()
 
     try:
-        if cliente and cliente.email:
-            # Email al cliente
-            msg_cliente = Message(
-                subject=f"Reserva cancelada — {negocio.nombre}",
-                recipients=[cliente.email]
-            )
-            msg_cliente.html = f"""
-                <h2>Tu reserva fue cancelada</h2>
-                <p>Hola <strong>{cliente.nombre}</strong>,</p>
-                <p>Tu reserva ha sido cancelada:</p>
-                <ul>
-                    <li><strong>Negocio:</strong> {negocio.nombre}</li>
-                    <li><strong>Servicio:</strong> {reserva.servicio}</li>
-                    <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-                </ul>
-                <p>Puedes hacer una nueva reserva en cualquier momento.</p>
-            """
-            mail.send(msg_cliente)
-
-            # Email al negocio
-            msg_negocio = Message(
-                subject=f"Reserva cancelada — {cliente.nombre}",
-                recipients=[negocio.email]
-            )
-            msg_negocio.html = f"""
-                <h2>Una reserva fue cancelada</h2>
-                <p>La siguiente reserva ha sido cancelada:</p>
-                <ul>
-                    <li><strong>Cliente:</strong> {cliente.nombre}</li>
-                    <li><strong>Email:</strong> {cliente.email}</li>
-                    <li><strong>Servicio:</strong> {reserva.servicio}</li>
-                    <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-                </ul>
-            """
-            mail.send(msg_negocio)
-
+        enviar_cancelacion_emails(cliente, negocio, reserva)
     except Exception as e:
         print(f"Error enviando email de cancelación: {e}")
 
