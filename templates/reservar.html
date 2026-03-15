@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block titulo %}Reservas — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <h2>📅 Nueva reserva</h2>
+
+    {% if mensaje %}
+    <div class="alerta alerta-success">{{ mensaje }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <div class="form-grupo">
+            <label>Selecciona una fecha</label>
+            <input type="date" name="fecha" required style="max-width: 250px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Ver disponibilidad</button>
+    </form>
+
+    {% if slots %}
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
+    <form method="POST">
+        <input type="hidden" name="servicio" value="Corte de cabello">
+        <div class="slots-grid">
+            {% for slot in slots %}
+            <button type="submit" name="hora" value="{{ slot }}" class="slot-btn">
+                {{ slot.strftime('%H:%M') }}
+            </button>
+            {% endfor %}
+        </div>
+    </form>
+    {% elif fecha_seleccionada %}
+    <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
+    {% endif %}
+</div>
+{% endblock %}

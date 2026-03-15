@@ -6,6 +6,7 @@ from datetime import datetime, time, date, timedelta
 from flask_mail import Mail, Message
 import os
 from dotenv import load_dotenv
+from flask import Flask, request, redirect, url_for, render_template
 
 load_dotenv()
 
@@ -55,15 +56,7 @@ def registro():
         login_user(usuario)
         return redirect(url_for("dashboard"))
 
-    return render_template_string("""
-        <h2>Registrar negocio</h2>
-        <form method="POST">
-            Nombre del negocio: <input name="nombre"><br><br>
-            Email: <input name="email" type="email"><br><br>
-            Contraseña: <input name="password" type="password"><br><br>
-            <button type="submit">Registrarse</button>
-        </form>
-    """)
+    return render_template("registro.html")
 
 # --- Login ---
 @app.route("/login", methods=["GET", "POST"])
@@ -80,20 +73,13 @@ def login():
 
         return "Email o contraseña incorrectos"
 
-    return render_template_string("""
-        <h2>Iniciar sesión</h2>
-        <form method="POST">
-            Email: <input name="email" type="email"><br><br>
-            Contraseña: <input name="password" type="password"><br><br>
-            <button type="submit">Entrar</button>
-        </form>
-    """)
+    return render_template("login.html")
 
 # --- Dashboard protegido ---
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return f"Bienvenido, {current_user.negocio.nombre}. Tu ID de negocio es: {current_user.negocio_id}"
+    return render_template("dashboard.html")
 
 # --- Ver clientes SOLO del negocio actual ---
 @app.route("/clientes")
@@ -104,12 +90,13 @@ def ver_clientes():
     ).all()
 
     if not clientes:
-        return f"No tienes clientes aún. <a href='/clientes/nuevo'>Agregar cliente</a>"
+        return render_template("nuevo_cliente.html")
 
     resultado = f"<h2>Clientes de {current_user.negocio.nombre}</h2>"
     for c in clientes:
         resultado += f"ID: {c.id} — {c.nombre} — {c.telefono}<br>"
-    return resultado
+    return render_template("clientes.html", clientes=clientes)
+    
 
 # --- Agregar cliente AL negocio actual ---
 @app.route("/clientes/nuevo", methods=["GET", "POST"])
@@ -125,14 +112,7 @@ def nuevo_cliente():
         db.session.commit()
         return redirect(url_for("ver_clientes"))
 
-    return render_template_string("""
-        <h2>Nuevo cliente</h2>
-        <form method="POST">
-            Nombre: <input name="nombre"><br><br>
-            Teléfono: <input name="telefono"><br><br>
-            <button type="submit">Guardar</button>
-        </form>
-    """)
+    return render_template("nuevo_cliente.html")
 
 # --- Logout ---
 @app.route("/logout")
@@ -166,21 +146,7 @@ def configurar_horario():
         return redirect(url_for("dashboard"))
 
     dias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
-    return render_template_string("""
-        <h2>Configurar horario</h2>
-        <form method="POST">
-        {% for i, dia in dias %}
-            <div>
-                <input type="checkbox" name="activo_{{ i }}" checked>
-                {{ dia }}:
-                <input type="time" name="apertura_{{ i }}" value="09:00">
-                hasta
-                <input type="time" name="cierre_{{ i }}" value="18:00">
-            </div><br>
-        {% endfor %}
-            <button type="submit">Guardar horario</button>
-        </form>
-    """, dias=enumerate(dias))
+    return render_template("horario.html", dias=enumerate(dias))
 
 # --- El algoritmo principal ---
 def obtener_slots_disponibles(negocio_id, fecha):
@@ -272,30 +238,11 @@ def reservar():
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
-    return render_template_string("""
-        <h2>Hacer una reserva</h2>
-        {% if mensaje %}<p>{{ mensaje }}</p>{% endif %}
+    return render_template("reservar.html", slots=slots, mensaje=mensaje, fecha_seleccionada=fecha_seleccionada)
 
-        <form method="POST">
-            <label>Selecciona una fecha:</label><br>
-            <input type="date" name="fecha" required>
-            <button type="submit">Ver disponibilidad</button>
-        </form>
+with app.app_context():
+    db.create_all()
 
-        {% if slots %}
-        <h3>Horas disponibles:</h3>
-        <form method="POST">
-            <input type="hidden" name="servicio" value="Corte de cabello">
-            {% for slot in slots %}
-                <button type="submit" name="hora" value="{{ slot }}">
-                    {{ slot.strftime('%H:%M') }}
-                </button>
-            {% endfor %}
-        </form>
-        {% elif fecha_seleccionada %}
-            <p>No hay disponibilidad para ese día.</p>
-        {% endif %}
-    """, slots=slots, mensaje=mensaje, fecha_seleccionada=fecha_seleccionada)
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

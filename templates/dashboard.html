@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block titulo %}Dashboard{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <h2>Bienvenido, {{ current_user.negocio.nombre }} 👋</h2>
+    <p style="color: #666; margin-bottom: 1.5rem;">Panel de control de tu negocio</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <a href="{{ url_for('ver_clientes') }}" class="btn btn-primary">👥 Ver clientes</a>
+        <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success">➕ Nuevo cliente</a>
+        <a href="{{ url_for('reservar') }}" class="btn btn-primary">📅 Nueva reserva</a>
+        <a href="{{ url_for('configurar_horario') }}" class="btn btn-success">🕐 Configurar horario</a>
+    </div>
+</div>
+{% endblock %}

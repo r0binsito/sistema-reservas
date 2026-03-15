@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block titulo %}Horario — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <h2>🕐 Configurar horario</h2>
+    <form method="POST">
+        {% set dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
+        {% for i in range(7) %}
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.8rem; background: #f8f9fa; border-radius: 8px;">
+            <input type="checkbox" name="activo_{{ i }}" checked style="width: auto;">
+            <span style="min-width: 90px; font-weight: 500;">{{ dias[i] }}</span>
+            <input type="time" name="apertura_{{ i }}" value="09:00" style="width: auto; padding: 0.4rem 0.8rem;">
+            <span style="color: #888;">hasta</span>
+            <input type="time" name="cierre_{{ i }}" value="18:00" style="width: auto; padding: 0.4rem 0.8rem;">
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">Guardar horario</button>
+    </form>
+</div>
+{% endblock %}

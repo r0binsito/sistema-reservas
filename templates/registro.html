@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block titulo %}Registrar negocio{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 420px; margin: 0 auto;">
+    <h2>Registrar negocio</h2>
+    <form method="POST">
+        <div class="form-grupo">
+            <label>Nombre del negocio</label>
+            <input type="text" name="nombre" required>
+        </div>
+        <div class="form-grupo">
+            <label>Email</label>
+            <input type="email" name="email" required>
+        </div>
+        <div class="form-grupo">
+            <label>Contraseña</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrarse</button>
+    </form>
+</div>
+{% endblock %}

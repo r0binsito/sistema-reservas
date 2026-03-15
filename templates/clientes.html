@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block titulo %}Clientes — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card">
+    <h2>👥 Clientes de {{ current_user.negocio.nombre }}</h2>
+    <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success" style="margin-bottom: 1.5rem; display: inline-block;">➕ Nuevo cliente</a>
+
+    {% if clientes %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente in clientes %}
+            <tr>
+                <td>{{ cliente.nombre }}</td>
+                <td>{{ cliente.telefono }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #888;">No tienes clientes aún.</p>
+    {% endif %}
+</div>
+{% endblock %}
