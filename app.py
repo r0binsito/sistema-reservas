@@ -266,6 +266,43 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
         <p>Si necesitas cancelar, responde a este correo.</p>
     """
     mail.send(msg)
+    
+def enviar_cancelacion(reserva):
+    # Email al cliente
+    msg_cliente = Message(
+        subject=f"Reserva cancelada — {reserva.negocio.nombre}",
+        recipients=[reserva.cliente.email]
+    )
+    msg_cliente.html = f"""
+        <h2>Tu reserva fue cancelada</h2>
+        <p>Hola <strong>{reserva.cliente.nombre}</strong>,</p>
+        <p>Lamentamos informarte que tu reserva ha sido cancelada:</p>
+        <ul>
+            <li><strong>Negocio:</strong> {reserva.negocio.nombre}</li>
+            <li><strong>Servicio:</strong> {reserva.servicio}</li>
+            <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+        </ul>
+        <p>Puedes hacer una nueva reserva en cualquier momento.</p>
+    """
+    mail.send(msg_cliente)
+
+    # Email al negocio
+    msg_negocio = Message(
+        subject=f"Reserva cancelada — {reserva.cliente.nombre}",
+        recipients=[reserva.negocio.email]
+    )
+    msg_negocio.html = f"""
+        <h2>Una reserva fue cancelada</h2>
+        <p>La siguiente reserva ha sido cancelada:</p>
+        <ul>
+            <li><strong>Cliente:</strong> {reserva.cliente.nombre}</li>
+            <li><strong>Email:</strong> {reserva.cliente.email}</li>
+            <li><strong>Servicio:</strong> {reserva.servicio}</li>
+            <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+        </ul>
+    """
+    mail.send(msg_negocio)
+    
 
 # --- Página pública de reservas ---
 @app.route("/b/<slug>", methods=["GET", "POST"])
@@ -290,7 +327,6 @@ def reserva_publica(slug):
         try:
             fecha_hora = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
 
-            # Buscar o crear el cliente
             cliente = Cliente.query.filter_by(
                 email=email_cliente,
                 negocio_id=negocio.id
@@ -332,8 +368,8 @@ def reserva_publica(slug):
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
     servicios = Servicio.query.filter_by(
-    negocio_id=negocio.id,
-    activo=True
+        negocio_id=negocio.id,
+        activo=True
     ).all()
 
     return render_template(
@@ -344,8 +380,8 @@ def reserva_publica(slug):
         fecha_seleccionada=fecha_seleccionada,
         servicio_seleccionado=servicio_seleccionado,
         servicios=servicios
-)
-
+    )
+            
 # --- Ver todas las reservas del negocio ---
 @app.route("/reservas")
 @login_required
@@ -355,7 +391,6 @@ def ver_reservas():
     ).order_by(Reserva.fecha_hora).all()
     return render_template("reservas.html", reservas=reservas)
 
-# --- Cancelar una reserva ---
 @app.route("/reservas/cancelar/<int:reserva_id>", methods=["POST"])
 @login_required
 def cancelar_reserva(reserva_id):
@@ -363,8 +398,54 @@ def cancelar_reserva(reserva_id):
         id=reserva_id,
         negocio_id=current_user.negocio_id
     ).first_or_404()
+
+    # Cargar relaciones explícitamente antes de cambiar el estado
+    cliente = Cliente.query.get(reserva.cliente_id)
+    negocio = Negocio.query.get(reserva.negocio_id)
+
     reserva.estado = "cancelada"
     db.session.commit()
+
+    try:
+        if cliente and cliente.email:
+            # Email al cliente
+            msg_cliente = Message(
+                subject=f"Reserva cancelada — {negocio.nombre}",
+                recipients=[cliente.email]
+            )
+            msg_cliente.html = f"""
+                <h2>Tu reserva fue cancelada</h2>
+                <p>Hola <strong>{cliente.nombre}</strong>,</p>
+                <p>Tu reserva ha sido cancelada:</p>
+                <ul>
+                    <li><strong>Negocio:</strong> {negocio.nombre}</li>
+                    <li><strong>Servicio:</strong> {reserva.servicio}</li>
+                    <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+                </ul>
+                <p>Puedes hacer una nueva reserva en cualquier momento.</p>
+            """
+            mail.send(msg_cliente)
+
+            # Email al negocio
+            msg_negocio = Message(
+                subject=f"Reserva cancelada — {cliente.nombre}",
+                recipients=[negocio.email]
+            )
+            msg_negocio.html = f"""
+                <h2>Una reserva fue cancelada</h2>
+                <p>La siguiente reserva ha sido cancelada:</p>
+                <ul>
+                    <li><strong>Cliente:</strong> {cliente.nombre}</li>
+                    <li><strong>Email:</strong> {cliente.email}</li>
+                    <li><strong>Servicio:</strong> {reserva.servicio}</li>
+                    <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+                </ul>
+            """
+            mail.send(msg_negocio)
+
+    except Exception as e:
+        print(f"Error enviando email de cancelación: {e}")
+
     return redirect(url_for("ver_reservas"))
 
 with app.app_context():

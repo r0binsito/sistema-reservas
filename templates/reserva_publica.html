@@ -1,17 +1,31 @@
 {% extends "base.html" %}
 
-{% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
-
-{% block contenido %}
-
 {% block navbar %}
 <nav class="navbar">
     <div class="nav-brand">📅 Reserfy</div>
     <div class="nav-links">
-        <a href="{{ url_for('index') }}" style="color: #ecf0f1;">¿Tienes un negocio? Regístrate gratis</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('ver_clientes') }}">Clientes</a>
+            {% if current_user.negocio.slug %}
+                <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
+            {% endif %}
+            <a href="{{ url_for('ver_servicios') }}">Servicios</a>
+            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
+            <a href="{{ url_for('configurar_horario') }}">Horario</a>
+            <a href="{{ url_for('logout') }}">Cerrar sesión</a>
+        {% else %}
+            <a href="{{ url_for('index') }}" style="color: #ecf0f1;">¿Tienes un negocio? Regístrate gratis</a>
+        {% endif %}
     </div>
 </nav>
 {% endblock %}
+
+{% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
+
+{% block contenido %}
+
+
 
 <div class="card" style="max-width: 600px; margin: 0 auto;">
     <h2>📅 Reservar en {{ negocio.nombre }}</h2>
