@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, request, redirect, url_for, render_template
 import re
+import pytz
 
 load_dotenv()
 
@@ -46,6 +47,12 @@ def generar_slug(nombre):
         contador += 1
 
     return slug
+
+def hora_local(negocio, fecha_hora_utc):
+    tz = pytz.timezone(negocio.timezone)
+    if fecha_hora_utc.tzinfo is None:
+        fecha_hora_utc = pytz.utc.localize(fecha_hora_utc)
+    return fecha_hora_utc.astimezone(tz)
 
 # --- Index ---
 @app.route("/")
@@ -208,37 +215,38 @@ def configurar_horario():
     dias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
     return render_template("horario.html", dias=enumerate(dias))
 
-# --- El algoritmo principal ---
 def obtener_slots_disponibles(negocio_id, fecha):
-    # 1. Buscar el horario del negocio para ese día de la semana
-    dia_semana = fecha.weekday()  # 0=Lunes, 6=Domingo
+    negocio = Negocio.query.get(negocio_id)
+    tz = pytz.timezone(negocio.timezone)
+
+    dia_semana = fecha.weekday()
     horario = Horario.query.filter_by(
         negocio_id=negocio_id,
         dia_semana=dia_semana
     ).first()
 
     if not horario:
-        return []  # El negocio no trabaja ese día
+        return []
 
-    # 2. Generar todos los slots posibles cada 60 minutos
     slots = []
     hora_actual = datetime.combine(fecha, horario.hora_apertura)
     hora_cierre = datetime.combine(fecha, horario.hora_cierre)
 
     while hora_actual < hora_cierre:
-        slots.append(hora_actual)
+        hora_local_aware = tz.localize(hora_actual)
+        hora_utc = hora_local_aware.astimezone(pytz.utc).replace(tzinfo=None)
+        slots.append((hora_actual, hora_utc))
         hora_actual += timedelta(hours=1)
 
-    # 3. Quitar los slots que ya tienen reserva
     reservas_del_dia = Reserva.query.filter(
         Reserva.negocio_id == negocio_id,
-        Reserva.fecha_hora >= datetime.combine(fecha, time.min),
-        Reserva.fecha_hora <= datetime.combine(fecha, time.max),
+        Reserva.fecha_hora >= tz.localize(datetime.combine(fecha, time.min)).astimezone(pytz.utc).replace(tzinfo=None),
+        Reserva.fecha_hora <= tz.localize(datetime.combine(fecha, time.max)).astimezone(pytz.utc).replace(tzinfo=None),
         Reserva.estado != "cancelada"
     ).all()
 
     horas_ocupadas = [r.fecha_hora.replace(second=0, microsecond=0) for r in reservas_del_dia]
-    slots_disponibles = [s for s in slots if s not in horas_ocupadas]
+    slots_disponibles = [(local, utc) for local, utc in slots if utc not in horas_ocupadas]
 
     return slots_disponibles
 
@@ -257,7 +265,13 @@ def enviar_email(destinatario, asunto, contenido_html):
     except Exception as e:
         print(f"Error enviando email: {e}")
 
-def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token):
+def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token, timezone="America/Santo_Domingo"):
+    tz = pytz.timezone(timezone)
+    if fecha_hora.tzinfo is None:
+        fecha_hora_display = tz.localize(fecha_hora)
+    else:
+        fecha_hora_display = fecha_hora.astimezone(tz)
+
     link_gestion = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reserva/{token}/gestionar"
     enviar_email(
         destinatario=email_cliente,
@@ -269,7 +283,7 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
             <ul>
                 <li><strong>Negocio:</strong> {nombre_negocio}</li>
                 <li><strong>Servicio:</strong> {servicio}</li>
-                <li><strong>Fecha y hora:</strong> {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+                <li><strong>Fecha y hora:</strong> {fecha_hora_display.strftime('%d/%m/%Y a las %H:%M')}</li>
             </ul>
             <p>
                 <a href="{link_gestion}" style="background:#e74c3c;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">
@@ -339,7 +353,7 @@ def reserva_publica(slug):
         servicio_seleccionado = request.form.get("servicio")
 
         try:
-            fecha_hora = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
+            fecha_hora_utc = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
 
             cliente = Cliente.query.filter_by(
                 email=email_cliente,
@@ -357,7 +371,7 @@ def reserva_publica(slug):
                 db.session.commit()
 
             reserva = Reserva(
-                fecha_hora=fecha_hora,
+                fecha_hora=fecha_hora_utc,
                 servicio=servicio_seleccionado,
                 negocio_id=negocio.id,
                 cliente_id=cliente.id
@@ -370,15 +384,17 @@ def reserva_publica(slug):
                     email_cliente=email_cliente,
                     nombre_cliente=nombre_cliente,
                     servicio=servicio_seleccionado,
-                    fecha_hora=fecha_hora,
+                    fecha_hora=fecha_hora_utc,
                     nombre_negocio=negocio.nombre,
-                    token=reserva.token
-                    
+                    token=reserva.token,
+                    timezone=negocio.timezone
                 )
             except Exception:
                 pass
 
-            mensaje = f"✅ Reserva confirmada para el {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}"
+            tz = pytz.timezone(negocio.timezone)
+            fecha_hora_local = pytz.utc.localize(fecha_hora_utc).astimezone(tz)
+            mensaje = f"✅ Reserva confirmada para el {fecha_hora_local.strftime('%d/%m/%Y a las %H:%M')}"
 
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."

@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
+
 {% block navbar %}
 <nav class="navbar">
     <div class="nav-brand">📅 Reserfy</div>
@@ -21,71 +23,62 @@
 </nav>
 {% endblock %}
 
-{% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
-
 {% block contenido %}
-
-
-
 <div class="card" style="max-width: 600px; margin: 0 auto;">
     <h2>📅 Reservar en {{ negocio.nombre }}</h2>
 
     {% if mensaje %}
-    <div class="alerta alerta-success">{{ mensaje }}</div>
+        <div class="alerta alerta-success">{{ mensaje }}</div>
     {% else %}
-    <form method="POST">
-        <div class="form-grupo">
-            <label>Tu nombre</label>
-            <input type="text" name="nombre_cliente" required value="{{ request.form.get('nombre_cliente', '') }}">
-        </div>
+        <form method="POST">
+            <div class="form-grupo">
+                <label>Tu nombre</label>
+                <input type="text" name="nombre_cliente" required value="{{ request.form.get('nombre_cliente', '') }}">
+            </div>
+            <div class="form-grupo">
+                <label>Tu email</label>
+                <input type="email" name="email_cliente" required value="{{ request.form.get('email_cliente', '') }}">
+            </div>
+            <div class="form-grupo">
+                <label>Tu teléfono</label>
+                <input type="text" name="telefono_cliente" value="{{ request.form.get('telefono_cliente', '') }}">
+            </div>
+            <div class="form-grupo">
+                <label>Servicio</label>
+                <select name="servicio" style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
+                    {% for s in servicios %}
+                    <option value="{{ s.nombre }}" {{ 'selected' if request.form.get('servicio') == s.nombre }}>
+                        {{ s.nombre }} — {{ s.duracion_min }} min
+                        {% if s.precio %} — ${{ '%.2f' % s.precio }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-grupo">
+                <label>Fecha</label>
+                <input type="date" name="fecha" required value="{{ request.form.get('fecha', '') }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Ver disponibilidad</button>
+        </form>
 
-        <div class="form-grupo">
-            <label>Tu email</label>
-            <input type="email" name="email_cliente" required value="{{ request.form.get('email_cliente', '') }}">
-        </div>
-
-        <div class="form-grupo">
-            <label>Tu teléfono</label>
-            <input type="text" name="telefono_cliente" value="{{ request.form.get('telefono_cliente', '') }}">
-        </div>
-
-        <div class="form-grupo">
-            <label>Servicio</label>
-            <select name="servicio"
-                style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                {% for s in servicios %}
-                <option value="{{ s.nombre }}" {{ 'selected' if request.form.get('servicio')==s.nombre }}>
-                    {{ s.nombre }} — {{ s.duracion_min }} min
-                    {% if s.precio %} — ${{ '%.2f' % s.precio }}{% endif %}
-                </option>
+        {% if slots %}
+        <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
+        <form method="POST">
+            <input type="hidden" name="nombre_cliente" value="{{ request.form.get('nombre_cliente') }}">
+            <input type="hidden" name="email_cliente" value="{{ request.form.get('email_cliente') }}">
+            <input type="hidden" name="telefono_cliente" value="{{ request.form.get('telefono_cliente') }}">
+            <input type="hidden" name="servicio" value="{{ servicio_seleccionado }}">
+            <div class="slots-grid">
+                {% for slot_local, slot_utc in slots %}
+                    <button type="submit" name="hora" value="{{ slot_utc }}" class="slot-btn">
+                        {{ slot_local.strftime('%H:%M') }}
+                    </button>
                 {% endfor %}
-            </select>
-        </div>
-        <div class="form-grupo">
-            <label>Fecha</label>
-            <input type="date" name="fecha" required value="{{ request.form.get('fecha', '') }}">
-        </div>
-        <button type="submit" class="btn btn-primary">Ver disponibilidad</button>
-    </form>
-
-    {% if slots %}
-    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
-    <form method="POST">
-        <input type="hidden" name="nombre_cliente" value="{{ request.form.get('nombre_cliente') }}">
-        <input type="hidden" name="telefono_cliente" value="{{ request.form.get('telefono_cliente') }}">
-        <input type="hidden" name="email_cliente" value="{{ request.form.get('email_cliente') }}">
-        <input type="hidden" name="servicio" value="{{ servicio_seleccionado }}">
-        <div class="slots-grid">
-            {% for slot in slots %}
-            <button type="submit" name="hora" value="{{ slot }}" class="slot-btn">
-                {{ slot.strftime('%H:%M') }}
-            </button>
-            {% endfor %}
-        </div>
-    </form>
-    {% elif fecha_seleccionada %}
-    <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
-    {% endif %}
+            </div>
+        </form>
+        {% elif fecha_seleccionada %}
+        <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
+        {% endif %}
 
     {% endif %}
 </div>

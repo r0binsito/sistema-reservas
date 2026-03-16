@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_login import UserMixin
 import uuid
+import pytz
 
 db = SQLAlchemy()
 
@@ -10,6 +11,7 @@ class Negocio(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     slug = db.Column(db.String(100), unique=True, nullable=True)
+    timezone = db.Column(db.String(50), nullable=False, default="America/Santo_Domingo")
     clientes = db.relationship("Cliente", backref="negocio", lazy=True)
     servicios = db.relationship("Servicio", backref="negocio", lazy=True)
 
