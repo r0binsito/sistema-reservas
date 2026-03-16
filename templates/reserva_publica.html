@@ -71,7 +71,7 @@
             <div class="slots-grid">
                 {% for slot_local, slot_utc in slots %}
                     <button type="submit" name="hora" value="{{ slot_utc }}" class="slot-btn">
-                        {{ slot_local.strftime('%H:%M') }}
+                        {{ slot_local.strftime('%I:%M %p') }}
                     </button>
                 {% endfor %}
             </div>

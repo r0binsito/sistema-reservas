@@ -283,7 +283,7 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
             <ul>
                 <li><strong>Negocio:</strong> {nombre_negocio}</li>
                 <li><strong>Servicio:</strong> {servicio}</li>
-                <li><strong>Fecha y hora:</strong> {fecha_hora_display.strftime('%d/%m/%Y a las %H:%M')}</li>
+                <li><strong>Fecha y hora:</strong> {fecha_hora_display.strftime('%d/%m/%Y a las %I:%M %p')}</li>
             </ul>
             <p>
                 <a href="{link_gestion}" style="background:#e74c3c;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">
@@ -309,7 +309,7 @@ def enviar_cancelacion_emails(cliente, negocio, reserva):
             <ul>
                 <li><strong>Negocio:</strong> {negocio.nombre}</li>
                 <li><strong>Servicio:</strong> {reserva.servicio}</li>
-                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
+                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %I:%M %p')}</li>
             </ul>
             <p>Puedes hacer una nueva reserva en cualquier momento.</p>
         """
@@ -394,7 +394,7 @@ def reserva_publica(slug):
 
             tz = pytz.timezone(negocio.timezone)
             fecha_hora_local = pytz.utc.localize(fecha_hora_utc).astimezone(tz)
-            mensaje = f"✅ Reserva confirmada para el {fecha_hora_local.strftime('%d/%m/%Y a las %H:%M')}"
+            mensaje = f"✅ Reserva confirmada para el {fecha_hora_local.strftime('%d/%m/%Y a las %I:%M %p')}"
 
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."

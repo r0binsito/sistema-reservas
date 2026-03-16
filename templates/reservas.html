@@ -22,7 +22,7 @@
             <tr>
                 <td>{{ r.cliente.nombre }}</td>
                 <td>{{ r.servicio }}</td>
-                <td>{{ r.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>{{ r.fecha_hora.strftime('%d/%m/%Y %I:%M %p') }}</td>
                 <td>
                     {% if r.estado == 'cancelada' %}
                         <span style="color: #e74c3c; font-weight: 500;">Cancelada</span>

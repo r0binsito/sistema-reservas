@@ -21,7 +21,7 @@
         <div style="background:#f8f9fa;border-radius:8px;padding:1rem;margin-bottom:1.5rem;">
             <p><strong>Negocio:</strong> {{ negocio.nombre }}</p>
             <p><strong>Servicio:</strong> {{ reserva.servicio }}</p>
-            <p><strong>Fecha y hora:</strong> {{ reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M') }}</p>
+            <p><strong>Fecha y hora:</strong> {{ reserva.fecha_hora.strftime('%d/%m/%Y a las %I:%M %p') }}</p>
             <p><strong>Estado:</strong>
                 {% if reserva.estado == 'cancelada' %}
                     <span style="color:#e74c3c;">Cancelada</span>
