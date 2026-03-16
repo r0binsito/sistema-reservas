@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titulo %}Gestionar reserva — Reserfy{% endblock %}
+
+{% block navbar %}
+<nav class="navbar">
+    <div class="nav-brand">📅 Reserfy</div>
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" style="color: #ecf0f1;">¿Tienes un negocio? Regístrate gratis</a>
+    </div>
+</nav>
+{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <h2>📋 Tu reserva</h2>
+
+    {% if mensaje %}
+        <div class="alerta alerta-success">{{ mensaje }}</div>
+    {% else %}
+        <div style="background:#f8f9fa;border-radius:8px;padding:1rem;margin-bottom:1.5rem;">
+            <p><strong>Negocio:</strong> {{ negocio.nombre }}</p>
+            <p><strong>Servicio:</strong> {{ reserva.servicio }}</p>
+            <p><strong>Fecha y hora:</strong> {{ reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M') }}</p>
+            <p><strong>Estado:</strong>
+                {% if reserva.estado == 'cancelada' %}
+                    <span style="color:#e74c3c;">Cancelada</span>
+                {% else %}
+                    <span style="color:#27ae60;">Confirmada</span>
+                {% endif %}
+            </p>
+        </div>
+
+        {% if reserva.estado != 'cancelada' %}
+        <form method="POST">
+            <button type="submit" class="btn btn-danger"
+                onclick="return confirm('¿Seguro que deseas cancelar esta reserva?')">
+                Cancelar mi reserva
+            </button>
+        </form>
+        {% else %}
+        <p style="color:#888;">Esta reserva ya fue cancelada.</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_login import UserMixin
+import uuid
 
 db = SQLAlchemy()
 
@@ -27,6 +28,7 @@ class Reserva(db.Model):
     estado = db.Column(db.String(20), default="pendiente")
     negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False)
     cliente_id = db.Column(db.Integer, db.ForeignKey("cliente.id"), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=True, default=lambda: str(uuid.uuid4()).replace("-", ""))
 
 class Usuario(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

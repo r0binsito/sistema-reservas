@@ -257,7 +257,8 @@ def enviar_email(destinatario, asunto, contenido_html):
     except Exception as e:
         print(f"Error enviando email: {e}")
 
-def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio):
+def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token):
+    link_gestion = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reserva/{token}/gestionar"
     enviar_email(
         destinatario=email_cliente,
         asunto=f"Reserva confirmada — {nombre_negocio}",
@@ -270,7 +271,12 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
                 <li><strong>Servicio:</strong> {servicio}</li>
                 <li><strong>Fecha y hora:</strong> {fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
             </ul>
-            <p>Si necesitas cancelar, responde a este correo.</p>
+            <p>
+                <a href="{link_gestion}" style="background:#e74c3c;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">
+                    Cancelar mi reserva
+                </a>
+            </p>
+            <p style="color:#888;font-size:12px;">O copia este link: {link_gestion}</p>
         """
     )
 
@@ -365,7 +371,9 @@ def reserva_publica(slug):
                     nombre_cliente=nombre_cliente,
                     servicio=servicio_seleccionado,
                     fecha_hora=fecha_hora,
-                    nombre_negocio=negocio.nombre
+                    nombre_negocio=negocio.nombre,
+                    token=reserva.token
+                    
                 )
             except Exception:
                 pass
@@ -422,6 +430,36 @@ def cancelar_reserva(reserva_id):
 
 with app.app_context():
     db.create_all()
+
+# --- Gestionar reserva como cliente (sin login) ---
+@app.route("/reserva/<token>/gestionar", methods=["GET", "POST"])
+def gestionar_reserva(token):
+    reserva = Reserva.query.filter_by(token=token).first_or_404()
+    negocio = Negocio.query.get(reserva.negocio_id)
+    cliente = Cliente.query.get(reserva.cliente_id)
+    mensaje = ""
+
+    if request.method == "POST":
+        if reserva.estado != "cancelada":
+            reserva.estado = "cancelada"
+            db.session.commit()
+
+            try:
+                enviar_cancelacion_emails(cliente, negocio, reserva)
+            except Exception as e:
+                print(f"Error enviando email: {e}")
+
+            mensaje = "✅ Tu reserva fue cancelada correctamente."
+        else:
+            mensaje = "Esta reserva ya estaba cancelada."
+
+    return render_template(
+        "gestionar_reserva.html",
+        reserva=reserva,
+        negocio=negocio,
+        cliente=cliente,
+        mensaje=mensaje
+    )    
 
 # --- Manejadores de error ---
 @app.errorhandler(404)
