@@ -103,25 +103,62 @@ function previsualizarLogo(input) {
 <script>
 let cropperInstance = null;
 
+// Resetear el input para que siempre dispare el evento
+document.getElementById('logo-input').addEventListener('click', function() {
+    this.value = '';
+});
+
 function iniciarCropper(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const img = document.getElementById('imagen-cropper');
-            img.src = e.target.result;
             const modal = document.getElementById('modal-cropper');
+            const img = document.getElementById('imagen-cropper');
+
+            // Destruir instancia anterior si existe
+            if (cropperInstance) {
+                cropperInstance.destroy();
+                cropperInstance = null;
+            }
+
+            img.src = e.target.result;
             modal.style.display = 'flex';
-            if (cropperInstance) cropperInstance.destroy();
-            cropperInstance = new Cropper(img, {
-                aspectRatio: 1,
-                viewMode: 1,
-                movable: true,
-                zoomable: true,
-                scalable: false,
-                cropBoxResizable: true
-            });
+
+            // Esperar a que la imagen cargue antes de iniciar cropper
+            img.onload = function() {
+                cropperInstance = new Cropper(img, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    movable: true,
+                    zoomable: true,
+                    scalable: false,
+                    cropBoxResizable: true
+                });
+            }
         }
         reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function confirmarCropper() {
+    if (cropperInstance) {
+        const canvas = cropperInstance.getCroppedCanvas({ width: 400, height: 400 });
+        const base64 = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('logo-recortado').value = base64;
+        const display = document.getElementById('logo-display');
+        const placeholder = document.getElementById('logo-placeholder');
+        display.src = base64;
+        display.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        cancelarCropper();
+    }
+}
+
+function cancelarCropper() {
+    document.getElementById('modal-cropper').style.display = 'none';
+    if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
     }
 }
 
