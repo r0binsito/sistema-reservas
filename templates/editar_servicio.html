@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block titulo %}Editar servicio — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 420px; margin: 0 auto;">
+    <h2>✏️ Editar servicio</h2>
+    <form method="POST">
+        <div class="form-grupo">
+            <label>Nombre del servicio</label>
+            <input type="text" name="nombre" required value="{{ servicio.nombre }}">
+        </div>
+        <div class="form-grupo">
+            <label>Duración (minutos)</label>
+            <input type="number" name="duracion_min" required value="{{ servicio.duracion_min }}" min="15" step="15">
+        </div>
+        <div class="form-grupo">
+            <label>Precio (RD$)</label>
+            <input type="number" name="precio" step="0.01" min="0" value="{{ servicio.precio or '' }}" placeholder="0.00">
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a href="{{ url_for('ver_servicios') }}" class="btn" style="margin-left: 1rem; color: #666;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

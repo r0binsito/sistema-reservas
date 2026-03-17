@@ -64,6 +64,45 @@ def hora_local(negocio, fecha_hora_utc):
         fecha_hora_utc = pytz.utc.localize(fecha_hora_utc)
     return fecha_hora_utc.astimezone(tz)
 
+PLANTILLAS_SERVICIOS = {
+    "Barbería": [
+        {"nombre": "Corte de cabello", "duracion_min": 30, "precio": 350},
+        {"nombre": "Barba", "duracion_min": 20, "precio": 200},
+        {"nombre": "Corte + Barba", "duracion_min": 45, "precio": 500},
+    ],
+    "Salón de belleza": [
+        {"nombre": "Corte de dama", "duracion_min": 45, "precio": 500},
+        {"nombre": "Tinte", "duracion_min": 90, "precio": 1500},
+        {"nombre": "Manicure", "duracion_min": 30, "precio": 300},
+        {"nombre": "Pedicure", "duracion_min": 45, "precio": 400},
+    ],
+    "Consultorio médico": [
+        {"nombre": "Consulta general", "duracion_min": 30, "precio": 800},
+        {"nombre": "Consulta de seguimiento", "duracion_min": 20, "precio": 500},
+    ],
+    "Consultorio dental": [
+        {"nombre": "Limpieza dental", "duracion_min": 45, "precio": 1000},
+        {"nombre": "Extracción", "duracion_min": 30, "precio": 800},
+        {"nombre": "Consulta", "duracion_min": 20, "precio": 500},
+    ],
+    "Spa": [
+        {"nombre": "Masaje relajante", "duracion_min": 60, "precio": 1500},
+        {"nombre": "Facial", "duracion_min": 45, "precio": 1200},
+        {"nombre": "Masaje deportivo", "duracion_min": 60, "precio": 1800},
+    ],
+    "Restaurante": [
+        {"nombre": "Reserva de mesa", "duracion_min": 120, "precio": 0},
+        {"nombre": "Reserva privada", "duracion_min": 180, "precio": 0},
+    ],
+    "Gimnasio": [
+        {"nombre": "Clase grupal", "duracion_min": 60, "precio": 300},
+        {"nombre": "Entrenamiento personal", "duracion_min": 60, "precio": 800},
+    ],
+    "Otro": [
+        {"nombre": "Servicio personalizado", "duracion_min": 60, "precio": 0},
+    ],
+}
+
 # --- Index ---
 @app.route("/")
 def index():
@@ -89,46 +128,36 @@ def registro():
         db.session.add(negocio)
         db.session.commit()
 
-        # Subir logo si se proporcionó
-        if "logo" in request.files:
-            archivo = request.files["logo"]
-            if archivo and archivo.filename != "":
-                try:
-                    resultado = cloudinary.uploader.upload(
-                        archivo,
-                        folder="reserfy/logos",
-                        public_id=f"negocio_{negocio.id}",
-                        overwrite=True,
-                        transformation=[
-                            {"width": 400, "height": 400, "crop": "fill"}
-                        ]
-                    )
-                    negocio.logo_url = resultado["secure_url"]
-                    db.session.commit()
-                except Exception as e:
-                    print(f"Error subiendo logo: {e}")
+        # Precargar servicios según tipo de negocio
+        tipo_negocio = request.form.get("tipo")
+        if tipo_negocio and tipo_negocio in PLANTILLAS_SERVICIOS:
+            for s in PLANTILLAS_SERVICIOS[tipo_negocio]:
+                servicio = Servicio(
+                    nombre=s["nombre"],
+                    duracion_min=s["duracion_min"],
+                    precio=s["precio"],
+                    negocio_id=negocio.id
+                )
+                db.session.add(servicio)
+            db.session.commit()
 
-        usuario = Usuario(
-            email=email,
-            password_hash=generate_password_hash(password),
-            negocio_id=negocio.id
-        )
-        db.session.add(usuario)
-        db.session.commit()
-
-        login_user(usuario)
-        return redirect(url_for("dashboard"))
-
-        return render_template("registro.html")
-
-        # Verificar si el email ya existe
-        if Negocio.query.filter_by(email=email).first():
-            return render_template("registro.html", error="Ya existe un negocio con ese email.")
-
-        negocio = Negocio(nombre=nombre, email=email)
-        negocio.slug = generar_slug(nombre)
-        db.session.add(negocio)
-        db.session.commit()
+        # Procesar logo recortado de Cropper.js
+        logo_recortado = request.form.get("logo_recortado")
+        if logo_recortado and logo_recortado.startswith("data:image"):
+            try:
+                resultado = cloudinary.uploader.upload(
+                    logo_recortado,
+                    folder="reserfy/logos",
+                    public_id=f"negocio_{negocio.id}",
+                    overwrite=True,
+                    transformation=[
+                        {"width": 400, "height": 400, "crop": "fill", "gravity": "face"}
+                    ]
+                )
+                negocio.logo_url = resultado["secure_url"]
+                db.session.commit()
+            except Exception as e:
+                print(f"Error subiendo logo: {e}")
 
         usuario = Usuario(
             email=email,
@@ -263,6 +292,24 @@ def nuevo_servicio():
         db.session.commit()
         return redirect(url_for("ver_servicios"))
     return render_template("nuevo_servicio.html")
+
+# --- Editar servicio ---
+@app.route("/servicios/editar/<int:servicio_id>", methods=["GET", "POST"])
+@login_required
+def editar_servicio(servicio_id):
+    servicio = Servicio.query.filter_by(
+        id=servicio_id,
+        negocio_id=current_user.negocio_id
+    ).first_or_404()
+
+    if request.method == "POST":
+        servicio.nombre = request.form["nombre"]
+        servicio.duracion_min = int(request.form["duracion_min"])
+        servicio.precio = float(request.form["precio"]) if request.form["precio"] else None
+        db.session.commit()
+        return redirect(url_for("ver_servicios"))
+
+    return render_template("editar_servicio.html", servicio=servicio)
 
 # --- Eliminar servicio ---
 @app.route("/servicios/eliminar/<int:servicio_id>", methods=["POST"])

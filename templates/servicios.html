@@ -16,7 +16,7 @@
                 <th>Nombre</th>
                 <th>Duración</th>
                 <th>Precio</th>
-                <th>Acción</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -24,12 +24,13 @@
             <tr>
                 <td>{{ s.nombre }}</td>
                 <td>{{ s.duracion_min }} min</td>
-                <td>{{ '%.2f' % s.precio if s.precio else '—' }}</td>
-                <td>
+                <td>{{ 'RD$%.2f' % s.precio if s.precio else '—' }}</td>
+                <td style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('editar_servicio', servicio_id=s.id) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">✏️ Editar</a>
                     <form method="POST" action="{{ url_for('eliminar_servicio', servicio_id=s.id) }}">
-                        <button type="submit" class="btn btn-danger"
+                        <button type="submit" class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;"
                             onclick="return confirm('¿Eliminar este servicio?')">
-                            Eliminar
+                            🗑️ Eliminar
                         </button>
                     </form>
                 </td>
