@@ -25,7 +25,31 @@
 
 {% block contenido %}
 <div class="card" style="max-width: 600px; margin: 0 auto;">
-    <h2>📅 Reservar en {{ negocio.nombre }}</h2>
+
+    <!-- Logo y header del negocio -->
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+        {% if negocio.logo_url %}
+            <img src="{{ negocio.logo_url }}" alt="Logo de {{ negocio.nombre }}"
+                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; margin-bottom: 0.8rem;">
+        {% else %}
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: #3498db; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem;">
+                <span style="color: white; font-size: 2.5rem;">📅</span>
+            </div>
+        {% endif %}
+        <h2 style="margin: 0;">{{ negocio.nombre }}</h2>
+        {% if negocio.tipo %}
+            <span style="background: #3498db; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">{{ negocio.tipo }}</span>
+        {% endif %}
+        {% if negocio.eslogan %}
+            <p style="color: #555; font-style: italic; margin-top: 0.5rem;">{{ negocio.eslogan }}</p>
+        {% endif %}
+        {% if negocio.telefono %}
+            <p style="color: #888; font-size: 0.9rem; margin: 0.3rem 0;">📞 {{ negocio.telefono }}</p>
+        {% endif %}
+        {% if negocio.direccion %}
+            <p style="color: #888; font-size: 0.9rem; margin: 0.3rem 0;">📍 {{ negocio.direccion }}</p>
+        {% endif %}
+    </div>
 
     {% if mensaje %}
         <div class="alerta alerta-success">{{ mensaje }}</div>
@@ -62,22 +86,22 @@
         </form>
 
         {% if slots %}
-        <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
-        <form method="POST">
-            <input type="hidden" name="nombre_cliente" value="{{ request.form.get('nombre_cliente') }}">
-            <input type="hidden" name="email_cliente" value="{{ request.form.get('email_cliente') }}">
-            <input type="hidden" name="telefono_cliente" value="{{ request.form.get('telefono_cliente') }}">
-            <input type="hidden" name="servicio" value="{{ servicio_seleccionado }}">
-            <div class="slots-grid">
-                {% for slot_local, slot_utc in slots %}
-                    <button type="submit" name="hora" value="{{ slot_utc }}" class="slot-btn">
-                        {{ slot_local.strftime('%I:%M %p') }}
-                    </button>
-                {% endfor %}
-            </div>
-        </form>
+            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
+            <form method="POST">
+                <input type="hidden" name="nombre_cliente" value="{{ request.form.get('nombre_cliente') }}">
+                <input type="hidden" name="email_cliente" value="{{ request.form.get('email_cliente') }}">
+                <input type="hidden" name="telefono_cliente" value="{{ request.form.get('telefono_cliente') }}">
+                <input type="hidden" name="servicio" value="{{ servicio_seleccionado }}">
+                <div class="slots-grid">
+                    {% for slot_local, slot_utc in slots %}
+                        <button type="submit" name="hora" value="{{ slot_utc }}" class="slot-btn">
+                            {{ slot_local.strftime('%I:%M %p') }}
+                        </button>
+                    {% endfor %}
+                </div>
+            </form>
         {% elif fecha_seleccionada %}
-        <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
+            <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
         {% endif %}
 
     {% endif %}

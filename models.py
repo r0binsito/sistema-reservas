@@ -12,6 +12,11 @@ class Negocio(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     slug = db.Column(db.String(100), unique=True, nullable=True)
     timezone = db.Column(db.String(50), nullable=False, default="America/Santo_Domingo")
+    tipo = db.Column(db.String(50), nullable=True)
+    eslogan = db.Column(db.String(200), nullable=True)
+    telefono = db.Column(db.String(20), nullable=True)
+    direccion = db.Column(db.String(200), nullable=True)
+    logo_url = db.Column(db.String(300), nullable=True)
     clientes = db.relationship("Cliente", backref="negocio", lazy=True)
     servicios = db.relationship("Servicio", backref="negocio", lazy=True)
 

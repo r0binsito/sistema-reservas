@@ -10,8 +10,18 @@ from dotenv import load_dotenv
 from flask import Flask, request, redirect, url_for, render_template
 import re
 import pytz
+import cloudinary
+import cloudinary.uploader
+import base64
+from io import BytesIO
 
 load_dotenv()
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///reservas.db")
@@ -65,6 +75,51 @@ def registro():
         nombre = request.form["nombre"]
         email = request.form["email"]
         password = request.form["password"]
+
+        if Negocio.query.filter_by(email=email).first():
+            return render_template("registro.html", error="Ya existe un negocio con ese email.")
+
+        negocio = Negocio(nombre=nombre, email=email)
+        negocio.slug = generar_slug(nombre)
+        negocio.tipo = request.form.get("tipo")
+        negocio.eslogan = request.form.get("eslogan")
+        negocio.telefono = request.form.get("telefono")
+        negocio.direccion = request.form.get("direccion")
+
+        db.session.add(negocio)
+        db.session.commit()
+
+        # Subir logo si se proporcionó
+        if "logo" in request.files:
+            archivo = request.files["logo"]
+            if archivo and archivo.filename != "":
+                try:
+                    resultado = cloudinary.uploader.upload(
+                        archivo,
+                        folder="reserfy/logos",
+                        public_id=f"negocio_{negocio.id}",
+                        overwrite=True,
+                        transformation=[
+                            {"width": 400, "height": 400, "crop": "fill"}
+                        ]
+                    )
+                    negocio.logo_url = resultado["secure_url"]
+                    db.session.commit()
+                except Exception as e:
+                    print(f"Error subiendo logo: {e}")
+
+        usuario = Usuario(
+            email=email,
+            password_hash=generate_password_hash(password),
+            negocio_id=negocio.id
+        )
+        db.session.add(usuario)
+        db.session.commit()
+
+        login_user(usuario)
+        return redirect(url_for("dashboard"))
+
+        return render_template("registro.html")
 
         # Verificar si el email ya existe
         if Negocio.query.filter_by(email=email).first():
@@ -150,6 +205,39 @@ def nuevo_cliente():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+# --- Perfil del negocio ---
+@app.route("/perfil", methods=["GET", "POST"])
+@login_required
+def perfil_negocio():
+    negocio = current_user.negocio
+    if request.method == "POST":
+        negocio.nombre = request.form.get("nombre", negocio.nombre)
+        negocio.tipo = request.form.get("tipo")
+        negocio.eslogan = request.form.get("eslogan")
+        negocio.telefono = request.form.get("telefono")
+        negocio.direccion = request.form.get("direccion")
+
+        # Procesar imagen recortada de Cropper.js
+        logo_recortado = request.form.get("logo_recortado")
+        if logo_recortado and logo_recortado.startswith("data:image"):
+            try:
+                resultado = cloudinary.uploader.upload(
+                    logo_recortado,
+                    folder="reserfy/logos",
+                    public_id=f"negocio_{negocio.id}",
+                    overwrite=True,
+                    transformation=[
+                        {"width": 400, "height": 400, "crop": "fill", "gravity": "face"}
+                    ]
+                )
+                negocio.logo_url = resultado["secure_url"]
+            except Exception as e:
+                print(f"Error subiendo logo: {e}")
+
+        db.session.commit()
+        return redirect(url_for("dashboard"))
+    return render_template("perfil.html", negocio=negocio)
 
 # --- Ver y gestionar servicios ---
 @app.route("/servicios")

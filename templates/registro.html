@@ -1,17 +1,72 @@
 {% extends "base.html" %}
 
-{% block titulo %}Registrar negocio{% endblock %}
+{% block titulo %}Registrar negocio — Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card" style="max-width: 420px; margin: 0 auto;">
+<div class="card" style="max-width: 500px; margin: 0 auto;">
     <h2>Registrar negocio</h2>
     {% if error %}
     <div class="alerta alerta-error">{{ error }}</div>
     {% endif %}
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
+
+        <!-- Logo redondo con cropper -->
+<div style="text-align: center; margin-bottom: 2rem;">
+    <div style="position: relative; display: inline-block;" onclick="document.getElementById('logo-input').click()">
+        <img id="logo-display" src="" alt=""
+             style="display:none; width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db;">
+        <div id="logo-placeholder" style="width: 120px; height: 120px; border-radius: 50%; border: 3px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; cursor: pointer;">
+            <span style="font-size: 2rem;">📷</span>
+            <span style="color: #aaa; font-size: 0.75rem;">Subir logo</span>
+        </div>
+    </div>
+    <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="iniciarCropper(this)">
+    <input type="hidden" name="logo_recortado" id="logo-recortado">
+</div>
+
+<!-- Modal del cropper -->
+<div id="modal-cropper" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:1.5rem; max-width:500px; width:90%;">
+        <h3 style="margin-bottom:1rem;">Ajusta tu logo</h3>
+        <div style="max-height:350px; overflow:hidden;">
+            <img id="imagen-cropper" style="max-width:100%;">
+        </div>
+        <div style="display:flex; gap:1rem; margin-top:1rem; justify-content:flex-end;">
+            <button type="button" onclick="cancelarCropper()" class="btn" style="color:#666;">Cancelar</button>
+            <button type="button" onclick="confirmarCropper()" class="btn btn-primary">Confirmar</button>
+        </div>
+    </div>
+</div>
+
         <div class="form-grupo">
             <label>Nombre del negocio</label>
             <input type="text" name="nombre" required>
+        </div>
+        <div class="form-grupo">
+            <label>Tipo de negocio</label>
+            <select name="tipo" style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
+                <option value="">Selecciona un tipo</option>
+                <option value="Barbería">Barbería</option>
+                <option value="Salón de belleza">Salón de belleza</option>
+                <option value="Consultorio médico">Consultorio médico</option>
+                <option value="Consultorio dental">Consultorio dental</option>
+                <option value="Spa">Spa</option>
+                <option value="Restaurante">Restaurante</option>
+                <option value="Gimnasio">Gimnasio</option>
+                <option value="Otro">Otro</option>
+            </select>
+        </div>
+        <div class="form-grupo">
+            <label>Eslogan</label>
+            <input type="text" name="eslogan" placeholder="Ej: El mejor corte de tu vida">
+        </div>
+        <div class="form-grupo">
+            <label>Teléfono</label>
+            <input type="text" name="telefono" placeholder="Ej: 809-555-1234">
+        </div>
+        <div class="form-grupo">
+            <label>Dirección</label>
+            <input type="text" name="direccion" placeholder="Ej: Calle Principal #123, Santiago">
         </div>
         <div class="form-grupo">
             <label>Email</label>
@@ -22,6 +77,71 @@
             <input type="password" name="password" required>
         </div>
         <button type="submit" class="btn btn-primary">Registrarse</button>
+        <a href="{{ url_for('login') }}" class="btn" style="margin-left: 1rem; color: #3498db;">Ya tengo cuenta</a>
     </form>
 </div>
+
+<script>
+function previsualizarLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('logo-preview');
+            const placeholder = document.getElementById('logo-placeholder');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+let cropperInstance = null;
+
+function iniciarCropper(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('imagen-cropper');
+            img.src = e.target.result;
+            const modal = document.getElementById('modal-cropper');
+            modal.style.display = 'flex';
+            if (cropperInstance) cropperInstance.destroy();
+            cropperInstance = new Cropper(img, {
+                aspectRatio: 1,
+                viewMode: 1,
+                movable: true,
+                zoomable: true,
+                scalable: false,
+                cropBoxResizable: true
+            });
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function confirmarCropper() {
+    if (cropperInstance) {
+        const canvas = cropperInstance.getCroppedCanvas({ width: 400, height: 400 });
+        const base64 = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('logo-recortado').value = base64;
+        const display = document.getElementById('logo-display');
+        const placeholder = document.getElementById('logo-placeholder');
+        display.src = base64;
+        display.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        cancelarCropper();
+    }
+}
+
+function cancelarCropper() {
+    document.getElementById('modal-cropper').style.display = 'none';
+    if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+}
+</script>
 {% endblock %}

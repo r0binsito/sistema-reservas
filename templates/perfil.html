@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block titulo %}Perfil del negocio — Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h2>🏪 Perfil del negocio</h2>
+    <form method="POST" enctype="multipart/form-data" id="perfil-form">
+
+        <!-- Logo redondo con cropper -->
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="position: relative; display: inline-block;">
+                {% if negocio.logo_url %}
+                    <img id="logo-display" src="{{ negocio.logo_url }}" alt="Logo"
+                         style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db;">
+                {% else %}
+                    <div id="logo-placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: #3498db; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <span style="color: white; font-size: 2.5rem;">📅</span>
+                    </div>
+                    <img id="logo-display" src="" alt="Logo"
+                         style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; display: none;">
+                {% endif %}
+                <!-- Botón flotante para cambiar logo -->
+                <div onclick="document.getElementById('logo-input').click()"
+                     style="position: absolute; bottom: 0; right: 0; background: #3498db; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
+                    <span style="color: white; font-size: 0.9rem;">✏️</span>
+                </div>
+            </div>
+            <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="iniciarCropper(this)">
+            <input type="hidden" name="logo_recortado" id="logo-recortado">
+        </div>
+
+        <!-- Modal del cropper -->
+        <div id="modal-cropper" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:white; border-radius:12px; padding:1.5rem; max-width:500px; width:90%;">
+                <h3 style="margin-bottom:1rem;">Ajusta tu logo</h3>
+                <div style="max-height:350px; overflow:hidden;">
+                    <img id="imagen-cropper" style="max-width:100%;">
+                </div>
+                <div style="display:flex; gap:1rem; margin-top:1rem; justify-content:flex-end;">
+                    <button type="button" onclick="cancelarCropper()" class="btn" style="color:#666;">Cancelar</button>
+                    <button type="button" onclick="confirmarCropper()" class="btn btn-primary">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-grupo">
+            <label>Nombre del negocio</label>
+            <input type="text" name="nombre" required value="{{ negocio.nombre }}">
+        </div>
+        <div class="form-grupo">
+            <label>Tipo de negocio</label>
+            <select name="tipo" style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
+                <option value="">Selecciona un tipo</option>
+                <option value="Barbería" {{ 'selected' if negocio.tipo == 'Barbería' }}>Barbería</option>
+                <option value="Salón de belleza" {{ 'selected' if negocio.tipo == 'Salón de belleza' }}>Salón de belleza</option>
+                <option value="Consultorio médico" {{ 'selected' if negocio.tipo == 'Consultorio médico' }}>Consultorio médico</option>
+                <option value="Consultorio dental" {{ 'selected' if negocio.tipo == 'Consultorio dental' }}>Consultorio dental</option>
+                <option value="Spa" {{ 'selected' if negocio.tipo == 'Spa' }}>Spa</option>
+                <option value="Restaurante" {{ 'selected' if negocio.tipo == 'Restaurante' }}>Restaurante</option>
+                <option value="Gimnasio" {{ 'selected' if negocio.tipo == 'Gimnasio' }}>Gimnasio</option>
+                <option value="Otro" {{ 'selected' if negocio.tipo == 'Otro' }}>Otro</option>
+            </select>
+        </div>
+        <div class="form-grupo">
+            <label>Eslogan</label>
+            <input type="text" name="eslogan" placeholder="Ej: El mejor corte de tu vida" value="{{ negocio.eslogan or '' }}">
+        </div>
+        <div class="form-grupo">
+            <label>Teléfono de contacto</label>
+            <input type="text" name="telefono" placeholder="Ej: 809-555-1234" value="{{ negocio.telefono or '' }}">
+        </div>
+        <div class="form-grupo">
+            <label>Dirección</label>
+            <input type="text" name="direccion" placeholder="Ej: Calle Principal #123, Santiago" value="{{ negocio.direccion or '' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a href="{{ url_for('dashboard') }}" class="btn" style="margin-left: 1rem; color: #666;">Cancelar</a>
+    </form>
+</div>
+
+<!-- Cropper.js CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+let cropperInstance = null;
+
+function iniciarCropper(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('imagen-cropper');
+            img.src = e.target.result;
+            const modal = document.getElementById('modal-cropper');
+            modal.style.display = 'flex';
+
+            if (cropperInstance) {
+                cropperInstance.destroy();
+            }
+
+            cropperInstance = new Cropper(img, {
+                aspectRatio: 1,
+                viewMode: 1,
+                movable: true,
+                zoomable: true,
+                scalable: false,
+                cropBoxResizable: true
+            });
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function confirmarCropper() {
+    if (cropperInstance) {
+        const canvas = cropperInstance.getCroppedCanvas({
+            width: 400,
+            height: 400
+        });
+        const base64 = canvas.toDataURL('image/jpeg', 0.9);
+        document.getElementById('logo-recortado').value = base64;
+
+        // Mostrar preview
+        const display = document.getElementById('logo-display');
+        const placeholder = document.getElementById('logo-placeholder');
+        display.src = base64;
+        display.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+
+        cancelarCropper();
+    }
+}
+
+function cancelarCropper() {
+    document.getElementById('modal-cropper').style.display = 'none';
+    if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+    }
+}
+</script>
+{% endblock %}
