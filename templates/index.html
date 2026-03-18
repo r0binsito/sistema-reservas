@@ -3,15 +3,91 @@
 {% block titulo %}Reserfy — Sistema de reservas para tu negocio{% endblock %}
 
 {% block contenido %}
-<div class="card" style="max-width: 600px; margin: 0 auto; text-align: center;">
-    <h1 style="color: #2c3e50; margin-bottom: 1rem;">📅 Reserfy</h1>
-    <p style="color: #666; font-size: 1.1rem; margin-bottom: 2rem;">
-        El sistema de reservas más simple para tu negocio.
-        Sin complicaciones, sin papel, sin llamadas.
+
+<!-- Hero Section -->
+<div style="text-align: center; padding: 4rem 1rem 3rem;">
+    <div class="badge badge-cyan" style="margin-bottom: 1.5rem;">
+        ⚡ Sistema de Reservas SaaS
+    </div>
+    <h1 style="font-size: 2.8rem; font-weight: 700; line-height: 1.2; margin-bottom: 1rem;">
+        Tu negocio,
+        <span style="background: linear-gradient(90deg, #00E5FF, #9B59B6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            siempre disponible
+        </span>
+    </h1>
+    <p style="color: var(--text-secondary); font-size: 1.1rem; max-width: 500px; margin: 0 auto 2rem; line-height: 1.7;">
+        Gestiona reservas, clientes y servicios desde un solo lugar. Sin llamadas, sin papel, sin complicaciones.
     </p>
-    <div style="display: flex; gap: 1rem; justify-content: center;">
-        <a href="{{ url_for('registro') }}" class="btn btn-primary">Registra tu negocio gratis</a>
-        <a href="{{ url_for('login') }}" class="btn" style="color: #3498db;">Iniciar sesión</a>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{{ url_for('registro') }}" class="btn btn-primary" style="padding: 0.85rem 2rem; font-size: 1rem;">
+            Registra tu negocio gratis
+        </a>
+        <a href="{{ url_for('login') }}" class="btn" style="padding: 0.85rem 2rem; font-size: 1rem;">
+            Iniciar sesión
+        </a>
     </div>
 </div>
+
+<!-- Stats -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 3rem;">
+    <div class="card" style="text-align: center; padding: 1.5rem;">
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">100%</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Multitenant</div>
+    </div>
+    <div class="card" style="text-align: center; padding: 1.5rem;">
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">24/7</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Disponible</div>
+    </div>
+    <div class="card" style="text-align: center; padding: 1.5rem;">
+        <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">∞</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem;">Negocios</div>
+    </div>
+</div>
+
+<!-- Features Grid -->
+<div style="margin-bottom: 1rem;">
+    <p style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); text-align: center; margin-bottom: 1.5rem;">
+        Funcionalidades del sistema
+    </p>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(0,229,255,0.1); border: 1px solid var(--border-cyan); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">📅</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Motor de reservas</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Slots en tiempo real según horario y disponibilidad del negocio</div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(155,89,182,0.1); border: 1px solid var(--border-purple); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">👥</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Gestión de clientes</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Base de datos de clientes completamente aislada por negocio</div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">✉️</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Notificaciones</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Emails automáticos de confirmación y cancelación vía SendGrid</div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(0,229,255,0.1); border: 1px solid var(--border-cyan); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">🔐</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Multitenancy</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Cada negocio con sus propios datos completamente aislados</div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(155,89,182,0.1); border: 1px solid var(--border-purple); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">✂️</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Servicios custom</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Define precios, duración y nombre de cada servicio</div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem;">🌐</div>
+            <div style="font-weight: 600; margin-bottom: 0.4rem;">Página pública</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">Link personalizado para que tus clientes reserven sin registro</div>
+        </div>
+
+    </div>
+</div>
+
 {% endblock %}
