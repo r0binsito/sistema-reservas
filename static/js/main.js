@@ -133,3 +133,22 @@ document.addEventListener('DOMContentLoaded', () => {
         mostrar(actual);
     }, duracion);
 });
+
+// Navbar hamburguesa
+const hamburguesa = document.getElementById('nav-hamburguesa');
+const navLinks = document.getElementById('nav-links');
+
+if (hamburguesa && navLinks) {
+    hamburguesa.addEventListener('click', () => {
+        hamburguesa.classList.toggle('active');
+        navLinks.classList.toggle('active');
+    });
+
+    // Cerrar al hacer clic en un link
+    navLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            hamburguesa.classList.remove('active');
+            navLinks.classList.remove('active');
+        });
+    });
+}

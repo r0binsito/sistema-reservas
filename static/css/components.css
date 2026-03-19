@@ -55,6 +55,79 @@
     animation: hero-shimmer 10s linear infinite;
 }
 
+/* ===== HAMBURGUESA ===== */
+.nav-hamburguesa {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 4px;
+    background: none;
+    border: none;
+}
+
+.nav-hamburguesa span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--secondary);
+    border-radius: 2px;
+    transition: var(--transition);
+}
+
+.nav-hamburguesa.active span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.nav-hamburguesa.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-hamburguesa.active span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+    .nav-hamburguesa {
+        display: flex;
+    }
+
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-white);
+        border-top: 1px solid var(--border-default);
+        border-bottom: 1px solid var(--border-default);
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.3rem;
+        box-shadow: var(--shadow-md);
+        z-index: 99;
+    }
+
+    .nav-links.active {
+        display: flex;
+    }
+
+    .nav-links a {
+        margin-left: 0;
+        padding: 0.7rem 1rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.95rem;
+    }
+
+    .nav-links a:hover {
+        background: rgba(145,42,92,0.06);
+    }
+
+    .propuestas-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ===== BANNER BIENVENIDA ===== */
 .banner-bienvenida {
     width: 100vw;
@@ -1406,3 +1479,4 @@ body {
 #site-footer {
     display: none;
 }
+

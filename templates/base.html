@@ -18,7 +18,15 @@
             <img src="{{ url_for('static', filename='img/logo.png') }}" class="nav-logo" alt="Reserfy">
             <span class="nav-brand-text">Reserfy</span>
         </a>
-        <div class="nav-links">
+
+        <!-- Botón hamburguesa -->
+        <button class="nav-hamburguesa" id="nav-hamburguesa" aria-label="Menú">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <div class="nav-links" id="nav-links">
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
             <a href="{{ url_for('ver_clientes') }}">Clientes</a>
