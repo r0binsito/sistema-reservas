@@ -836,28 +836,30 @@
 /* ===== FRANJA SEPARADORA ===== */
 .franja-separadora {
     position: relative;
+    width: 100vw; 
     left: 50%;
+    right: 50%;
     margin-left: -50vw;
     margin-right: -50vw;
-    width: 100vw;
-    margin-bottom: 2.5rem;
+    
+    margin-top: 4rem;
+    margin-bottom: 4rem;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .franja-separadora-inner {
     background: var(--gradient);
-    padding: 3rem 3rem 2.5rem;
+    padding: 4rem 1.5rem;
     text-align: center;
     position: relative;
-    overflow: hidden;
+    width: 100%;
 }
 
 .franja-separadora-inner::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-image:
         linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
@@ -865,22 +867,21 @@
     pointer-events: none;
 }
 
-.franja-separadora .section-subtitle {
-    color: rgba(255,255,255,0.75);
-    position: relative;
-}
-
-.franja-separadora .section-title {
-    position: relative;
-    margin-bottom: 0;
-}
-
-.franja-separadora .hero-highlight {
-    background: white;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 2rem;
+@media (max-width: 768px) {
+    .franja-separadora {
+        width: 100vw;
+        margin-left: -50vw;
+        left: 50%;
+        margin-top: 3rem;
+        margin-bottom: 3rem;
+    }
+    .franja-separadora-inner {
+        padding: 3rem 1.5rem;
+    }
+    .franja-separadora .section-title {
+        font-size: 1.5rem;
+        padding: 0 1rem;
+    }
 }
 
 /* ===== BUSINESS CARDS ===== */

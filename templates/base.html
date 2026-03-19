@@ -45,7 +45,7 @@
 
     {% block banner %}{% endblock %}
 
-    <main class="contenedor">
+    <div class="contenedor">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -53,9 +53,9 @@
             {% endfor %}
         {% endif %}
         {% endwith %}
+    </div>
 
-        {% block contenido %}{% endblock %}
-    </main>
+    {% block contenido %}{% endblock %}
 
     {% block footer_full %}{% endblock %}
 

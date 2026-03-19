@@ -39,7 +39,7 @@ html {
 html, body {
     overflow-x: hidden;
     width: 100%;
-}
+}  
 
 body {
     font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -48,4 +48,8 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+body {
+    overflow-x: hidden;
 }

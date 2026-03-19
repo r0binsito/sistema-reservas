@@ -4,7 +4,6 @@
 
 {% block banner %}
 <div class="banner-bienvenida">
-
     <div class="banner-geo banner-geo-1"></div>
     <div class="banner-geo banner-geo-2"></div>
     <div class="banner-geo banner-geo-3"></div>
@@ -45,111 +44,100 @@
         <span class="banner-rotativo-item">📧 Notificaciones automáticas por email al confirmar o cancelar</span>
         <span class="banner-rotativo-item">⚡ Configura tu página de reservas en menos de 10 minutos</span>
     </div>
-
 </div>
 {% endblock %}
 
 {% block contenido %}
-<!-- Hero -->
-<div class="hero-grid">
 
-    <div class="hero-content">
-        <div class="badge badge-cyan" style="margin-bottom: 1.5rem;">
-            ⚡ Sistema de Reservas SaaS
-        </div>
-        <h1>
-            Tu negocio,
-            <span class="hero-shimmer">siempre disponible</span>
-        </h1>
-        <p style="color: var(--text-secondary); font-size: 1rem; line-height: 1.8; margin-bottom: 2rem;">
-            Automatiza tu negocio, recibe reservas 24/7 y haz crecer tus ingresos con la plataforma más completa del
-            mercado.
-        </p>
-        <div class="hero-cta">
-            <a href="{{ url_for('registro') }}" class="btn btn-primary">Comenzar gratis →</a>
-            <a href="#como-funciona" class="btn">Ver cómo funciona</a>
-        </div>
-        <div class="propuestas-grid">
-            <div class="propuesta-item">
-                <div class="propuesta-icono">⚡</div>
-                <span class="propuesta-texto">Listo en minutos</span>
+<section class="contenedor">
+    <div class="hero-grid">
+        <div class="hero-content">
+            <div class="badge badge-cyan" style="margin-bottom: 1.5rem;">
+                ⚡ Sistema de Reservas SaaS
             </div>
-            <div class="propuesta-item">
-                <div class="propuesta-icono">🔐</div>
-                <span class="propuesta-texto">Datos aislados</span>
+            <h1>
+                Tu negocio,
+                <span class="hero-shimmer">siempre disponible</span>
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 1rem; line-height: 1.8; margin-bottom: 2rem;">
+                Automatiza tu negocio, recibe reservas 24/7 y haz crecer tus ingresos con la plataforma más completa del mercado.
+            </p>
+            <div class="hero-cta">
+                <a href="{{ url_for('registro') }}" class="btn btn-primary">Comenzar gratis →</a>
+                <a href="#como-funciona" class="btn">Ver cómo funciona</a>
             </div>
-            <div class="propuesta-item">
-                <div class="propuesta-icono">📱</div>
-                <span class="propuesta-texto">Sin app requerida</span>
+            
+            <div class="propuestas-grid">
+                <div class="propuesta-item">
+                    <div class="propuesta-icono">⚡</div>
+                    <span class="propuesta-texto">Listo en minutos</span>
+                </div>
+                <div class="propuesta-item">
+                    <div class="propuesta-icono">🔐</div>
+                    <span class="propuesta-texto">Datos aislados</span>
+                </div>
+                <div class="propuesta-item">
+                    <div class="propuesta-icono">📱</div>
+                    <span class="propuesta-texto">Sin app requerida</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-mockup">
+            <div class="card dashboard-card">
+                <div class="dashboard-header">
+                    <div class="dashboard-logo-wrap">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" class="dashboard-logo" alt="Reserfy">
+                        <span class="dashboard-title">Reserfy Dashboard</span>
+                    </div>
+                    <span class="badge badge-success">En vivo</span>
+                </div>
+                <div class="weekdays-grid">
+                    {% for dia in ['L', 'M', 'X', 'J', 'V', 'S', 'D'] %}
+                    <div class="weekday {% if loop.index == 5 %}active{% endif %}">{{ dia }}</div>
+                    {% endfor %}
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <div class="appointment active">
+                        <div class="appointment-dot"></div>
+                        <div class="appointment-info">
+                            <h4>María González</h4>
+                            <span class="time">10:00 AM — Corte y color</span>
+                        </div>
+                        <span class="badge badge-success appointment-status">Confirmada</span>
+                    </div>
+                    <div class="appointment">
+                        <div class="appointment-dot" style="background: var(--primary);"></div>
+                        <div class="appointment-info">
+                            <h4>Carlos Ruiz</h4>
+                            <span class="time">11:30 AM — Barba</span>
+                        </div>
+                        <span class="badge badge-purple appointment-status">Pendiente</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">Hoy</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">17</div>
+                        <div class="stat-label">Semana</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">+24%</div>
+                        <div class="stat-label">Crecimiento</div>
+                    </div>
+                </div>
+            </div>
+            <div class="notification-float">
+                <div class="notification-title">✓ Nueva reserva</div>
+                <div class="notification-detail">Pedro — 3:00 PM</div>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Dashboard Mockup -->
-    <div class="dashboard-mockup">
-        <div class="card dashboard-card">
-            <div class="dashboard-header">
-                <div class="dashboard-logo-wrap">
-                    <img src="{{ url_for('static', filename='img/logo.png') }}" class="dashboard-logo" alt="Reserfy">
-                    <span class="dashboard-title">Reserfy Dashboard</span>
-                </div>
-                <span class="badge badge-success">En vivo</span>
-            </div>
-            <div class="weekdays-grid">
-                {% for dia in ['L', 'M', 'X', 'J', 'V', 'S', 'D'] %}
-                <div class="weekday {% if loop.index == 5 %}active{% endif %}">{{ dia }}</div>
-                {% endfor %}
-            </div>
-            <div style="display: flex; flex-direction: column;">
-                <div class="appointment active">
-                    <div class="appointment-dot"></div>
-                    <div class="appointment-info">
-                        <h4>María González</h4>
-                        <span class="time">10:00 AM — Corte y color</span>
-                    </div>
-                    <span class="badge badge-success appointment-status">Confirmada</span>
-                </div>
-                <div class="appointment">
-                    <div class="appointment-dot" style="background: var(--primary);"></div>
-                    <div class="appointment-info">
-                        <h4>Carlos Ruiz</h4>
-                        <span class="time">11:30 AM — Barba</span>
-                    </div>
-                    <span class="badge badge-purple appointment-status">Pendiente</span>
-                </div>
-                <div class="appointment">
-                    <div class="appointment-dot" style="background: var(--success);"></div>
-                    <div class="appointment-info">
-                        <h4>Ana Martínez</h4>
-                        <span class="time">2:00 PM — Corte</span>
-                    </div>
-                    <span class="badge badge-success appointment-status">Confirmada</span>
-                </div>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-number">3</div>
-                    <div class="stat-label">Hoy</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">17</div>
-                    <div class="stat-label">Semana</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">+24%</div>
-                    <div class="stat-label">Crecimiento</div>
-                </div>
-            </div>
-        </div>
-        <div class="notification-float">
-            <div class="notification-title">✓ Nueva reserva</div>
-            <div class="notification-detail">Pedro — 3:00 PM</div>
-        </div>
-    </div>
-
-</div>
-
-<!-- Franja separadora -->
 <div class="franja-separadora">
     <div class="franja-separadora-inner">
         <p class="section-subtitle">¿Qué tipo de negocio tienes?</p>
@@ -159,172 +147,98 @@
     </div>
 </div>
 
-
-<!-- Tipos de negocio -->
-<div class="tipos-seccion">
-    <div class="business-grid" id="business-cards">
-
-        <div class="biz-card" data-type="Barbería" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=200&fit=crop"
-                    alt="Barbería">
+<section class="contenedor">
+    <div class="tipos-seccion">
+        <div class="business-grid" id="business-cards">
+            <div class="biz-card" data-type="Barbería" onclick="seleccionarTipo(this)">
+                <div class="biz-img-wrap">
+                    <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=200&fit=crop" alt="Barbería">
+                </div>
+                <div class="biz-name">Barbería</div>
+                <div class="biz-desc">Cortes, barba, estilos</div>
             </div>
-            <div class="biz-name">Barbería</div>
-            <div class="biz-desc">Cortes, barba, estilos</div>
+            <div class="biz-card" data-type="Salón de belleza" onclick="seleccionarTipo(this)">
+                <div class="biz-img-wrap">
+                    <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=200&fit=crop" alt="Salón de belleza">
+                </div>
+                <div class="biz-name">Salón de belleza</div>
+                <div class="biz-desc">Uñas, cabello, spa</div>
+            </div>
+            <div class="biz-card" data-type="Consultorio médico" onclick="seleccionarTipo(this)">
+                <div class="biz-img-wrap">
+                    <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=200&fit=crop" alt="Consultorio médico">
+                </div>
+                <div class="biz-name">Consultorio médico</div>
+                <div class="biz-desc">Citas, consultas</div>
+            </div>
+            <div class="biz-card" data-type="Gimnasio" onclick="seleccionarTipo(this)">
+                <div class="biz-img-wrap">
+                    <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop" alt="Gimnasio">
+                </div>
+                <div class="biz-name">Gimnasio</div>
+                <div class="biz-desc">Clases, entrenamientos</div>
+            </div>
         </div>
 
-        <div class="biz-card" data-type="Salón de belleza" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400&h=200&fit=crop"
-                    alt="Salón de belleza">
-            </div>
-            <div class="biz-name">Salón de belleza</div>
-            <div class="biz-desc">Uñas, cabello, spa</div>
-        </div>
-
-        <div class="biz-card" data-type="Consultorio médico" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=200&fit=crop"
-                    alt="Consultorio médico">
-            </div>
-            <div class="biz-name">Consultorio médico</div>
-            <div class="biz-desc">Citas, consultas</div>
-        </div>
-
-        <div class="biz-card" data-type="Consultorio dental" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=400&h=200&fit=crop"
-                    alt="Consultorio dental">
-            </div>
-            <div class="biz-name">Consultorio dental</div>
-            <div class="biz-desc">Limpiezas, tratamientos</div>
-        </div>
-
-        <div class="biz-card" data-type="Gimnasio" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=200&fit=crop"
-                    alt="Gimnasio">
-            </div>
-            <div class="biz-name">Gimnasio</div>
-            <div class="biz-desc">Clases, entrenamientos</div>
-        </div>
-
-        <div class="biz-card" data-type="Restaurante" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop"
-                    alt="Restaurante">
-            </div>
-            <div class="biz-name">Restaurante</div>
-            <div class="biz-desc">Mesas, eventos</div>
-        </div>
-
-        <div class="biz-card" data-type="Spa" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=200&fit=crop" alt="Spa">
-            </div>
-            <div class="biz-name">Spa</div>
-            <div class="biz-desc">Masajes, tratamientos</div>
-        </div>
-
-        <div class="biz-card" data-type="Otro" onclick="seleccionarTipo(this)">
-            <div class="biz-img-wrap">
-                <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=200&fit=crop"
-                    alt="Otro negocio">
-            </div>
-            <div class="biz-name">Otro</div>
-            <div class="biz-desc">Personaliza tu negocio</div>
+        <div id="biz-cta">
+            <p>Perfecto para <strong id="biz-selected"></strong> — comienza en menos de 2 minutos</p>
+            <a id="biz-register-btn" href="{{ url_for('registro') }}" class="btn btn-primary" style="padding: 0.85rem 2rem;">
+                Registrar mi negocio ahora →
+            </a>
         </div>
     </div>
 
-    <div id="biz-cta">
-        <p>Perfecto para <strong id="biz-selected"></strong> — comienza en menos de 2 minutos</p>
-        <a id="biz-register-btn" href="{{ url_for('registro') }}" class="btn btn-primary"
-            style="padding: 0.85rem 2rem;">
-            Registrar mi negocio ahora →
-        </a>
-    </div>
-</div>
-
-<!-- Cómo funciona -->
-<div id="como-funciona" class="como-funciona">
-    <p class="section-subtitle">Simple y rápido</p>
-    <h2 class="como-funciona-titulo">Comienza a recibir reservas en 3 pasos</h2>
-    <div class="steps-grid">
-        <div class="card step-card">
-            <div class="step-number">1</div>
-            <h3>Registra tu negocio</h3>
-            <p>Crea tu cuenta, define tus servicios y configura tu horario de atención</p>
-        </div>
-        <div class="card step-card">
-            <div class="step-number">2</div>
-            <h3>Comparte tu link</h3>
-            <p>Comparte tu página pública personalizada con tus clientes por WhatsApp o redes sociales</p>
-        </div>
-        <div class="card step-card">
-            <div class="step-number">3</div>
-            <h3>Recibe reservas 24/7</h3>
-            <p>Tus clientes reservan solos y tú recibes confirmaciones automáticas por email</p>
+    <div id="como-funciona" class="como-funciona">
+        <p class="section-subtitle">Simple y rápido</p>
+        <h2 class="como-funciona-titulo">Comienza a recibir reservas en 3 pasos</h2>
+        <div class="steps-grid">
+            <div class="card step-card">
+                <div class="step-number">1</div>
+                <h3>Registra tu negocio</h3>
+                <p>Crea tu cuenta, define tus servicios y configura tu horario de atención</p>
+            </div>
+            <div class="card step-card">
+                <div class="step-number">2</div>
+                <h3>Comparte tu link</h3>
+                <p>Comparte tu página pública personalizada con tus clientes por WhatsApp o redes sociales</p>
+            </div>
+            <div class="card step-card">
+                <div class="step-number">3</div>
+                <h3>Recibe reservas 24/7</h3>
+                <p>Tus clientes reservan solos y tú recibes confirmaciones automáticas por email</p>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- FAQ -->
-<div class="faq-seccion">
-    <p class="section-subtitle">FAQ</p>
-    <h2 class="faq-titulo">Preguntas frecuentes</h2>
-    <div class="faq-lista">
-
-        <div class="faq-item card" onclick="toggleFaq(this)">
-            <div>
-                <span class="faq-question">¿Necesito conocimientos técnicos para usar Reserfy?</span>
-                <span class="faq-arrow">▼</span>
+    <div class="faq-seccion">
+        <p class="section-subtitle">FAQ</p>
+        <h2 class="faq-titulo">Preguntas frecuentes</h2>
+        <div class="faq-lista">
+            <div class="faq-item card" onclick="toggleFaq(this)">
+                <div>
+                    <span class="faq-question">¿Necesito conocimientos técnicos para usar Reserfy?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-body">
+                    No. Reserfy está diseñado para que cualquier dueño de negocio pueda usarlo sin conocimientos técnicos.
+                </div>
             </div>
-            <div class="faq-body">
-                No. Reserfy está diseñado para que cualquier dueño de negocio pueda usarlo sin conocimientos técnicos.
-                En menos de 10 minutos tienes tu página lista.
+            <div class="faq-item card" onclick="toggleFaq(this)">
+                <div>
+                    <span class="faq-question">¿Los datos de mis clientes están seguros?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-body">
+                    Sí. Cada negocio tiene sus datos completamente aislados. Usamos PostgreSQL en la nube con backups automáticos.
+                </div>
             </div>
         </div>
-
-        <div class="faq-item card" onclick="toggleFaq(this)">
-            <div>
-                <span class="faq-question">¿Los datos de mis clientes están seguros?</span>
-                <span class="faq-arrow">▼</span>
-            </div>
-            <div class="faq-body">
-                Sí. Cada negocio tiene sus datos completamente aislados. Usamos PostgreSQL en la nube con backups
-                automáticos y conexiones cifradas SSL.
-            </div>
-        </div>
-
-        <div class="faq-item card" onclick="toggleFaq(this)">
-            <div>
-                <span class="faq-question">¿Mis clientes necesitan registrarse para reservar?</span>
-                <span class="faq-arrow">▼</span>
-            </div>
-            <div class="faq-body">
-                No. Tus clientes solo necesitan tu link público, elegir un servicio y una hora. Sin registros, sin
-                contraseñas, sin complicaciones.
-            </div>
-        </div>
-
-        <div class="faq-item card" onclick="toggleFaq(this)">
-            <div>
-                <span class="faq-question">¿Puedo personalizar los servicios de mi negocio?</span>
-                <span class="faq-arrow">▼</span>
-            </div>
-            <div class="faq-body">
-                Sí. Puedes crear servicios con nombre, duración y precio personalizados. También puedes definir tu
-                horario de atención por día de la semana.
-            </div>
-        </div>
-
     </div>
-</div>
+</section>
 
 {% endblock %}
 
 {% block footer_full %}
-<!-- CTA Final de extremo a extremo -->
 <div class="cta-final-wrap">
     <div class="cta-final">
         <div class="cta-final-patron"></div>
@@ -336,34 +250,26 @@
         <hr class="cta-separador">
         <p class="cta-siguenos">Síguenos</p>
         <div class="social-grid">
-            <!-- Facebook -->
             <a href="#" class="social-btn social-fb" title="Facebook">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>
             </a>
-            <!-- Instagram -->
             <a href="#" class="social-btn social-ig" title="Instagram">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                    <circle cx="12" cy="12" r="4" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                 </svg>
             </a>
-            <!-- YouTube -->
             <a href="#" class="social-btn social-yt" title="YouTube">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                    <path
-                        d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
-                    <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#FF0000" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path>
                 </svg>
             </a>
-            <!-- WhatsApp -->
             <a href="https://wa.me/18295551234" class="social-btn social-wa" title="WhatsApp">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                    <path
-                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.634 1.437h.005c6.558 0 11.895-5.335 11.895-11.893a11.821 11.821 0 00-3.48-8.413Z" />
                 </svg>
             </a>
         </div>
@@ -379,5 +285,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
