@@ -64,3 +64,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 });
+
+
+// Business type card selection
+function seleccionarTipo(card) {
+    document.querySelectorAll('.biz-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+
+    const tipo = card.dataset.type;
+    const cta = document.getElementById('biz-cta');
+    const selected = document.getElementById('biz-selected');
+    const btn = document.getElementById('biz-register-btn');
+
+    selected.textContent = tipo;
+    cta.style.display = 'block';
+    btn.href = `/registro?tipo=${encodeURIComponent(tipo)}`;
+}
+
+// Animar business cards en cascada al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    const bizCards = document.querySelectorAll('.biz-card');
+    bizCards.forEach((card, i) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 200 + i * 80);
+    });
+});
+
+// FAQ toggle
+function toggleFaq(item) {
+    const body = item.querySelector('.faq-body');
+    const arrow = item.querySelector('.faq-arrow');
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+    item.style.borderColor = isOpen ? 'var(--border-default)' : 'var(--border-cyan)';
+}
+
+// Ocultar footer en index porque el CTA final ya funciona como footer
+if (window.location.pathname === '/') {
+    const footer = document.getElementById('site-footer');
+    if (footer) footer.style.display = 'none';
+}
+
+// Banner rotativo
+document.addEventListener('DOMContentLoaded', () => {
+    const items = document.querySelectorAll('.banner-rotativo-item');
+    if (!items.length) return;
+
+    let actual = 0;
+    const duracion = 3500;
+
+    function mostrar(index) {
+        items.forEach(item => {
+            item.style.animation = 'none';
+            item.style.opacity = '0';
+        });
+        items[index].style.animation = `fadeSlide ${duracion}ms ease forwards`;
+    }
+
+    mostrar(actual);
+    setInterval(() => {
+        actual = (actual + 1) % items.length;
+        mostrar(actual);
+    }, duracion);
+});

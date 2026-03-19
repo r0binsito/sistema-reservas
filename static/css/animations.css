@@ -61,3 +61,85 @@
 .pulse-logo {
     animation: pulse-cyan 2.5s ease-in-out infinite;
 }
+
+/* ===== TEXT SHIMMER ===== */
+@keyframes shimmer-text {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+.text-shimmer {
+    background: linear-gradient(
+        90deg,
+        #ffffff 0%,
+        #ffffff 30%,
+        #FFD700 45%,
+        #ffffff 55%,
+        #ffffff 70%,
+        #FFD700 85%,
+        #ffffff 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer-text 3s linear infinite;
+}
+
+/* ===== TEXT REVEAL GLOW ===== */
+@keyframes glow-pulse {
+    0%, 100% {
+        text-shadow:
+            0 0 10px rgba(255,255,255,0.4),
+            0 0 20px rgba(255,255,255,0.2),
+            0 0 40px rgba(255,200,100,0.3);
+        opacity: 1;
+    }
+    50% {
+        text-shadow:
+            0 0 20px rgba(255,255,255,0.8),
+            0 0 40px rgba(255,255,255,0.5),
+            0 0 80px rgba(255,200,100,0.6),
+            0 0 120px rgba(255,150,50,0.4);
+        opacity: 0.95;
+    }
+}
+
+.text-glow {
+    color: white;
+    -webkit-text-fill-color: white;
+    animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* ===== HERO SHIMMER ===== */
+@keyframes hero-shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+.hero-shimmer {
+    background: linear-gradient(
+        90deg,
+        #912A5C 0%,
+        #FA8F3E 25%,
+        #FFD700 40%,
+        #FF6B9D 55%,
+        #FA8F3E 70%,
+        #912A5C 85%,
+        #FA8F3E 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: hero-shimmer 15s linear infinite;
+}
+
+/* ===== BANNER ROTATIVO ===== */
+@keyframes fadeSlide {
+    0% { opacity: 0; transform: translateY(8px); }
+    10% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 0; transform: translateY(-8px); }
+    100% { opacity: 0; transform: translateY(-8px); }
+}
