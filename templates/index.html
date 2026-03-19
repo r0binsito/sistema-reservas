@@ -17,6 +17,7 @@
             <h2 class="banner-titulo">Tus Reservas,<br>Sin Esfuerzo.</h2>
             <p class="banner-subtitulo">Centraliza y automatiza tu negocio en minutos.</p>
         </div>
+        
         <div class="banner-tarjetas">
             <div class="banner-glass-card">
                 <span class="banner-glass-icon">📅</span>
@@ -27,8 +28,8 @@
                 <span class="banner-glass-texto">Emails automáticos</span>
             </div>
             <div class="banner-glass-card">
-                <span class="banner-glass-icon">🏪</span>
-                <span class="banner-glass-texto">Tu página propia</span>
+                <span class="banner-glass-icon">📱</span>
+                <span class="banner-glass-texto">Multi-Plataforma</span>
             </div>
             <div class="banner-glass-card">
                 <span class="banner-glass-icon">👥</span>
@@ -47,10 +48,11 @@
 </div>
 {% endblock %}
 
-{% block contenido %}
 
+{% block contenido %}
 <section class="contenedor">
     <div class="hero-grid">
+        
         <div class="hero-content">
             <div class="badge badge-cyan" style="margin-bottom: 1.5rem;">
                 ⚡ Sistema de Reservas SaaS
@@ -62,6 +64,7 @@
             <p style="color: var(--text-secondary); font-size: 1rem; line-height: 1.8; margin-bottom: 2rem;">
                 Automatiza tu negocio, recibe reservas 24/7 y haz crecer tus ingresos con la plataforma más completa del mercado.
             </p>
+            
             <div class="hero-cta">
                 <a href="{{ url_for('registro') }}" class="btn btn-primary">Comenzar gratis →</a>
                 <a href="#como-funciona" class="btn">Ver cómo funciona</a>
@@ -92,11 +95,13 @@
                     </div>
                     <span class="badge badge-success">En vivo</span>
                 </div>
+                
                 <div class="weekdays-grid">
                     {% for dia in ['L', 'M', 'X', 'J', 'V', 'S', 'D'] %}
                     <div class="weekday {% if loop.index == 5 %}active{% endif %}">{{ dia }}</div>
                     {% endfor %}
                 </div>
+                
                 <div style="display: flex; flex-direction: column;">
                     <div class="appointment active">
                         <div class="appointment-dot"></div>
@@ -115,6 +120,7 @@
                         <span class="badge badge-purple appointment-status">Pendiente</span>
                     </div>
                 </div>
+                
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number">3</div>
@@ -130,6 +136,7 @@
                     </div>
                 </div>
             </div>
+            
             <div class="notification-float">
                 <div class="notification-title">✓ Nueva reserva</div>
                 <div class="notification-detail">Pedro — 3:00 PM</div>
@@ -214,40 +221,66 @@
         <p class="section-subtitle">FAQ</p>
         <h2 class="faq-titulo">Preguntas frecuentes</h2>
         <div class="faq-lista">
+            
             <div class="faq-item card" onclick="toggleFaq(this)">
                 <div>
                     <span class="faq-question">¿Necesito conocimientos técnicos para usar Reserfy?</span>
                     <span class="faq-arrow">▼</span>
                 </div>
                 <div class="faq-body">
-                    No. Reserfy está diseñado para que cualquier dueño de negocio pueda usarlo sin conocimientos técnicos.
+                    No. Reserfy está diseñado para que cualquier dueño de negocio pueda usarlo sin conocimientos técnicos. Todo se configura visualmente desde tu panel.
                 </div>
             </div>
+            
             <div class="faq-item card" onclick="toggleFaq(this)">
                 <div>
                     <span class="faq-question">¿Los datos de mis clientes están seguros?</span>
                     <span class="faq-arrow">▼</span>
                 </div>
                 <div class="faq-body">
-                    Sí. Cada negocio tiene sus datos completamente aislados. Usamos PostgreSQL en la nube con backups automáticos.
+                    Sí. Cada negocio tiene sus datos completamente aislados. Usamos bases de datos seguras en la nube con backups automáticos para proteger tu información.
                 </div>
             </div>
+
+            <div class="faq-item card" onclick="toggleFaq(this)">
+                <div>
+                    <span class="faq-question">¿Puedo personalizar los servicios y horarios que ofrezco?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-body">
+                    Totalmente. Desde tu panel de control podrás crear todos los servicios que quieras, asignarles una duración, un precio, y configurar qué días y horas estás disponible para recibir reservas.
+                </div>
+            </div>
+
+            <div class="faq-item card" onclick="toggleFaq(this)">
+                <div>
+                    <span class="faq-question">¿Existe algún límite en la cantidad de reservas?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-body">
+                    No, con Reserfy puedes recibir reservas ilimitadas 24/7. Nuestro sistema está preparado para crecer al mismo ritmo que tu negocio sin cobrarte comisiones por cita.
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
-
 {% endblock %}
+
 
 {% block footer_full %}
 <div class="cta-final-wrap">
     <div class="cta-final">
         <div class="cta-final-patron"></div>
+        
         <h2>¿Listo para automatizar tu negocio?</h2>
         <p>Registra tu negocio hoy y empieza a recibir reservas en minutos.</p>
         <a href="{{ url_for('registro') }}" class="cta-final-btn">
             Registrar mi negocio gratis →
         </a>
+        
         <hr class="cta-separador">
+        
         <p class="cta-siguenos">Síguenos</p>
         <div class="social-grid">
             <a href="#" class="social-btn social-fb" title="Facebook">
@@ -273,7 +306,9 @@
                 </svg>
             </a>
         </div>
+        
         <hr class="cta-separador">
+        
         <div class="cta-footer">
             <span class="cta-footer-copy">© 2026 Reserfy — reserfy.up.railway.app</span>
             <div class="cta-footer-links">
