@@ -31,7 +31,15 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "clave-temporal")
 
 # Google OAuth
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+if os.getenv("FLASK_ENV") == "development":
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
+# URI dinámica según entorno
+base_url = os.getenv("BASE_URL", "http://localhost:5000")
+redirect_url = f"{base_url}/auth/google/authorized"
+
 google_bp = make_google_blueprint(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
@@ -40,8 +48,10 @@ google_bp = make_google_blueprint(
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile"
     ],
-    redirect_to="google_login_callback"
+    redirect_to="google_login_callback",
+    redirect_url=redirect_url
 )
+
 app.register_blueprint(google_bp, url_prefix="/auth")
 
 db.init_app(app)
