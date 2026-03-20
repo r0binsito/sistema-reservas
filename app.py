@@ -14,6 +14,8 @@ import cloudinary
 import cloudinary.uploader
 import base64
 from io import BytesIO
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized
 
 load_dotenv()
 
@@ -27,6 +29,20 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///reservas.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "clave-temporal")
+
+# Google OAuth
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+google_bp = make_google_blueprint(
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    scope=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+    ],
+    redirect_to="google_login_callback"
+)
+app.register_blueprint(google_bp, url_prefix="/auth")
 
 db.init_app(app)
 
@@ -188,6 +204,48 @@ def login():
         return "Email o contraseña incorrectos"
 
     return render_template("login.html")
+
+# --- Google OAuth callback ---
+@app.route("/auth/google/authorized")
+def google_login_callback():
+    if not google.authorized:
+        return redirect(url_for("login"))
+
+    resp = google.get("/oauth2/v1/userinfo")
+    if not resp.ok:
+        return redirect(url_for("login"))
+
+    info = resp.json()
+    email = info["email"]
+    nombre = info.get("name", email.split("@")[0])
+
+    usuario = Usuario.query.filter_by(email=email).first()
+    if usuario:
+        login_user(usuario)
+        return redirect(url_for("dashboard"))
+
+    negocio = Negocio.query.filter_by(email=email).first()
+    if not negocio:
+        negocio = Negocio(nombre=nombre, email=email)
+        negocio.slug = generar_slug(nombre)
+        db.session.add(negocio)
+        db.session.commit()
+
+    usuario = Usuario(
+        email=email,
+        password_hash=generate_password_hash(os.urandom(24).hex()),
+        negocio_id=negocio.id
+    )
+    db.session.add(usuario)
+    db.session.commit()
+
+    login_user(usuario)
+    return redirect(url_for("dashboard"))
+
+# --- Iniciar login con Google ---
+@app.route("/auth/google")
+def google_login():
+    return redirect(url_for("google.login"))
 
 # --- Dashboard protegido ---
 @app.route("/dashboard")
