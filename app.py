@@ -1,21 +1,22 @@
-from flask import Flask, request, redirect, url_for, render_template_string
+from flask import Flask, request, redirect, url_for, render_template, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
 from datetime import datetime, time, date, timedelta
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
-import os
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized
 from dotenv import load_dotenv
-from flask import Flask, request, redirect, url_for, render_template
+import os
 import re
 import pytz
 import cloudinary
 import cloudinary.uploader
-import base64
-from io import BytesIO
-from flask_dance.contrib.google import make_google_blueprint, google
+from flask import g
 from flask_dance.consumer import oauth_authorized
+from flask_dance.contrib.google import google
 
 load_dotenv()
 
@@ -26,23 +27,27 @@ cloudinary.config(
 )
 
 app = Flask(__name__)
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Solo aplicar ProxyFix en producción (Railway)
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 database_url = os.getenv("DATABASE_URL", "sqlite:///reservas.db")
-# Railway usa postgres:// pero SQLAlchemy necesita postgresql://
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "clave-temporal")
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "reserfy-dev-key-2026")
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = False
+app.config["WTF_CSRF_ENABLED"] = False  # ← AQUÍ
 
 # Google OAuth
-if os.getenv("FLASK_ENV") == "development":
+if not os.getenv("RAILWAY_ENVIRONMENT"):
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
-# URI dinámica según entorno
 base_url = os.getenv("BASE_URL", "http://localhost:5000")
 redirect_url = f"{base_url}/auth/google/authorized"
 
@@ -54,9 +59,14 @@ google_bp = make_google_blueprint(
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile"
     ],
-    redirect_to="google_login_callback",
     redirect_url=redirect_url
 )
+
+@app.before_request
+def forzar_estado_oauth():
+    if request.endpoint == 'google.authorized':
+        if 'google_oauth_state' not in session:
+            session['google_oauth_state'] = request.args.get('state', '')
 
 app.register_blueprint(google_bp, url_prefix="/auth")
 
@@ -69,6 +79,50 @@ login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(user_id):
     return Usuario.query.get(int(user_id))
+
+@app.context_processor
+def inject_plan_info():
+    if current_user.is_authenticated:
+        negocio = current_user.negocio
+        plan = negocio.plan or "trial"
+        limites = get_limites(negocio)
+        
+        # Calcular uso actual
+        from datetime import datetime
+        inicio_mes = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0)
+        uso = {
+            "reservas_mes": Reserva.query.filter(
+                Reserva.negocio_id == negocio.id,
+                Reserva.fecha_hora >= inicio_mes,
+                Reserva.estado != "cancelada"
+            ).count(),
+            "clientes": Cliente.query.filter_by(negocio_id=negocio.id).count(),
+            "servicios": Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count(),
+        }
+        
+        trial_expirado = False
+        dias_restantes = None
+        if plan == "trial" and negocio.trial_expira:
+            delta = negocio.trial_expira - datetime.utcnow()
+            if delta.days < 0:
+                trial_expirado = True
+            else:
+                dias_restantes = delta.days
+
+        return dict(
+            plan_actual=plan,
+            plan_limites=limites,
+            plan_uso=uso,
+            trial_expirado=trial_expirado,
+            dias_restantes=dias_restantes
+        )
+    return dict(
+        plan_actual=None,
+        plan_limites=None,
+        plan_uso=None,
+        trial_expirado=False,
+        dias_restantes=None
+    )
 
 def generar_slug(nombre):
     slug = nombre.lower()
@@ -137,6 +191,72 @@ PLANTILLAS_SERVICIOS = {
     ],
 }
 
+# ===== LÍMITES POR PLAN =====
+LIMITES_PLAN = {
+    "trial": {
+        "reservas_mes": 999,
+        "clientes": 999,
+        "servicios": 999,
+        "estadisticas": True,
+        "marca_agua": False,
+    },
+    "starter": {
+        "reservas_mes": 50,
+        "clientes": 30,
+        "servicios": 3,
+        "estadisticas": False,
+        "marca_agua": True,
+    },
+    "pro": {
+        "reservas_mes": 999,
+        "clientes": 999,
+        "servicios": 999,
+        "estadisticas": True,
+        "marca_agua": True,
+    },
+    "elite": {
+        "reservas_mes": 999,
+        "clientes": 999,
+        "servicios": 999,
+        "estadisticas": True,
+        "marca_agua": False,
+    },
+}
+
+def get_limites(negocio):
+    plan = negocio.plan or "trial"
+    # Verificar si el trial expiró
+    if plan == "trial" and negocio.trial_expira:
+        from datetime import datetime
+        if datetime.utcnow() > negocio.trial_expira:
+            return None  # Trial expirado — bloquear
+    return LIMITES_PLAN.get(plan, LIMITES_PLAN["starter"])
+
+def verificar_limite(negocio, tipo):
+    limites = get_limites(negocio)
+    if limites is None:
+        return False, "trial_expirado"
+
+    if tipo == "reservas_mes":
+        from datetime import datetime
+        inicio_mes = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0)
+        count = Reserva.query.filter(
+            Reserva.negocio_id == negocio.id,
+            Reserva.fecha_hora >= inicio_mes,
+            Reserva.estado != "cancelada"
+        ).count()
+        return count < limites["reservas_mes"], count
+
+    if tipo == "clientes":
+        count = Cliente.query.filter_by(negocio_id=negocio.id).count()
+        return count < limites["clientes"], count
+
+    if tipo == "servicios":
+        count = Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count()
+        return count < limites["servicios"], count
+
+    return True, 0
+
 # --- Index ---
 @app.route("/")
 def index():
@@ -187,7 +307,7 @@ def login():
             login_user(usuario)
             return redirect(url_for("dashboard"))
 
-        return "Email o contraseña incorrectos"
+        return render_template("login.html", error="Email o contraseña incorrectos")
 
     return render_template("login.html")
 
@@ -251,13 +371,18 @@ def elegir_plan():
         return redirect(url_for("configurar_negocio"))
     return render_template("elegir_plan.html", paso=2)
 
-# --- Google OAuth callback ---
-@app.route("/auth/google/authorized")
-def google_login_callback():
-    if not google.authorized:
+from flask_dance.consumer import oauth_error
+
+@oauth_error.connect_via(google_bp)
+def google_error(blueprint, message, response):
+    pass  # Ignorar errores OAuth
+
+@oauth_authorized.connect_via(google_bp)
+def google_authorized(blueprint, token):
+    if not token:
         return redirect(url_for("login"))
 
-    resp = google.get("/oauth2/v1/userinfo")
+    resp = blueprint.session.get("/oauth2/v1/userinfo")
     if not resp.ok:
         return redirect(url_for("login"))
 
@@ -268,7 +393,7 @@ def google_login_callback():
     usuario = Usuario.query.filter_by(email=email).first()
     if usuario:
         login_user(usuario)
-        return redirect(url_for("dashboard"))
+        return False
 
     negocio = Negocio(nombre="Mi negocio", email=email)
     negocio.slug = generar_slug(email.split("@")[0])
@@ -284,12 +409,14 @@ def google_login_callback():
     db.session.commit()
 
     login_user(usuario)
-    return redirect(url_for("elegir_plan"))
+    return False
 
-# --- Iniciar login con Google ---
-@app.route("/auth/google")
-def google_login():
-    return redirect(url_for("google.login"))
+@app.after_request
+def redirigir_post_oauth(response):
+    if response.status_code == 302 and '/auth/google' in request.path:
+        if current_user.is_authenticated:
+            return redirect(url_for("elegir_plan"))
+    return response
 
 # --- Dashboard protegido ---
 @app.route("/dashboard")
@@ -314,10 +441,18 @@ def ver_clientes():
     return render_template("clientes.html", clientes=clientes)
     
 
-# --- Agregar cliente AL negocio actual ---
 @app.route("/clientes/nuevo", methods=["GET", "POST"])
 @login_required
 def nuevo_cliente():
+    negocio = current_user.negocio
+    puede, count = verificar_limite(negocio, "clientes")
+    if not puede:
+        if count == "trial_expirado":
+            return redirect(url_for("upgrade"))
+        from flask import flash
+        flash(f"Alcanzaste el límite de clientes de tu plan ({LIMITES_PLAN[negocio.plan]['clientes']}). Actualiza tu plan para agregar más.", "error")
+        return redirect(url_for("upgrade"))
+
     if request.method == "POST":
         cliente = Cliente(
             nombre=request.form["nombre"],
@@ -327,8 +462,38 @@ def nuevo_cliente():
         db.session.add(cliente)
         db.session.commit()
         return redirect(url_for("ver_clientes"))
-
     return render_template("nuevo_cliente.html")
+
+
+@app.route("/servicios/nuevo", methods=["GET", "POST"])
+@login_required
+def nuevo_servicio():
+    negocio = current_user.negocio
+    puede, count = verificar_limite(negocio, "servicios")
+    if not puede:
+        if count == "trial_expirado":
+            return redirect(url_for("upgrade"))
+        from flask import flash
+        flash(f"Alcanzaste el límite de servicios de tu plan ({LIMITES_PLAN[negocio.plan]['servicios']}). Actualiza tu plan.", "error")
+        return redirect(url_for("upgrade"))
+
+    if request.method == "POST":
+        servicio = Servicio(
+            nombre=request.form["nombre"],
+            duracion_min=int(request.form["duracion_min"]),
+            precio=float(request.form["precio"]) if request.form["precio"] else None,
+            negocio_id=current_user.negocio_id
+        )
+        db.session.add(servicio)
+        db.session.commit()
+        return redirect(url_for("ver_servicios"))
+    return render_template("nuevo_servicio.html")
+
+@app.route("/upgrade")
+@login_required
+def upgrade():
+    negocio = current_user.negocio
+    return render_template("upgrade.html", negocio=negocio)
 
 # --- Logout ---
 @app.route("/logout")
@@ -378,22 +543,6 @@ def ver_servicios():
         negocio_id=current_user.negocio_id
     ).all()
     return render_template("servicios.html", servicios=servicios)
-
-# --- Agregar servicio ---
-@app.route("/servicios/nuevo", methods=["GET", "POST"])
-@login_required
-def nuevo_servicio():
-    if request.method == "POST":
-        servicio = Servicio(
-            nombre=request.form["nombre"],
-            duracion_min=int(request.form["duracion_min"]),
-            precio=float(request.form["precio"]) if request.form["precio"] else None,
-            negocio_id=current_user.negocio_id
-        )
-        db.session.add(servicio)
-        db.session.commit()
-        return redirect(url_for("ver_servicios"))
-    return render_template("nuevo_servicio.html")
 
 # --- Editar servicio ---
 @app.route("/servicios/editar/<int:servicio_id>", methods=["GET", "POST"])
@@ -531,6 +680,64 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nom
         """
     )
 
+def enviar_notificacion_negocio(negocio, cliente, reserva):
+    try:
+        tz = pytz.timezone(negocio.timezone)
+        if reserva.fecha_hora.tzinfo is None:
+            fecha_display = pytz.utc.localize(reserva.fecha_hora).astimezone(tz)
+        else:
+            fecha_display = reserva.fecha_hora.astimezone(tz)
+
+        enviar_email(
+            destinatario=negocio.email,
+            asunto=f"📅 Nueva reserva — {cliente.nombre}",
+            contenido_html=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #912A5C, #FA8F3E); padding: 2rem; text-align: center; border-radius: 12px 12px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 1.5rem;">📅 Nueva Reserva</h1>
+                    <p style="color: rgba(255,255,255,0.85); margin: 0.5rem 0 0;">Tienes una nueva reserva en {negocio.nombre}</p>
+                </div>
+                <div style="background: #f8f8f8; padding: 2rem; border-radius: 0 0 12px 12px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">👤 Cliente</td>
+                            <td style="padding: 0.8rem 0; font-weight: 600; color: #1A1A1A;">{cliente.nombre}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">📧 Email</td>
+                            <td style="padding: 0.8rem 0; color: #1A1A1A;">{cliente.email or '—'}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">📞 Teléfono</td>
+                            <td style="padding: 0.8rem 0; color: #1A1A1A;">{cliente.telefono or '—'}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">✂️ Servicio</td>
+                            <td style="padding: 0.8rem 0; font-weight: 600; color: #1A1A1A;">{reserva.servicio}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">🗓️ Fecha y hora</td>
+                            <td style="padding: 0.8rem 0; font-weight: 600; color: #912A5C;">
+                                {fecha_display.strftime('%d/%m/%Y a las %I:%M %p')}
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        <a href="{os.getenv('BASE_URL', 'http://localhost:5000')}/reservas"
+                           style="background: linear-gradient(135deg, #912A5C, #FA8F3E); color: white; padding: 0.8rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 700;">
+                            Ver en el dashboard →
+                        </a>
+                    </div>
+                    <p style="color: #aaa; font-size: 0.78rem; text-align: center; margin-top: 1.5rem;">
+                        Este email fue enviado automáticamente por Reserfy
+                    </p>
+                </div>
+            </div>
+            """
+        )
+    except Exception as e:
+        print(f"Error enviando notificación al negocio: {e}")
+
 def enviar_cancelacion_emails(cliente, negocio, reserva):
     if not cliente or not cliente.email:
         return
@@ -578,6 +785,11 @@ def reserva_publica(slug):
     fecha_seleccionada = None
     servicio_seleccionado = None
 
+    servicios = Servicio.query.filter_by(
+        negocio_id=negocio.id,
+        activo=True
+    ).all()
+
     if request.method == "POST" and "fecha" in request.form and "hora" not in request.form:
         fecha_seleccionada = datetime.strptime(request.form["fecha"], "%Y-%m-%d").date()
         servicio_seleccionado = request.form.get("servicio")
@@ -590,6 +802,14 @@ def reserva_publica(slug):
         servicio_seleccionado = request.form.get("servicio")
 
         try:
+            puede, count = verificar_limite(negocio, "reservas_mes")
+            if not puede:
+                mensaje = "Este negocio ha alcanzado su límite de reservas por este mes. Intenta más tarde."
+                return render_template("reserva_publica.html",
+                    negocio=negocio, slots=[], mensaje=mensaje,
+                    fecha_seleccionada=None, servicio_seleccionado=None,
+                    servicios=servicios)
+
             fecha_hora_utc = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
 
             cliente = Cliente.query.filter_by(
@@ -617,6 +837,11 @@ def reserva_publica(slug):
             db.session.commit()
 
             try:
+                enviar_notificacion_negocio(negocio, cliente, reserva)
+            except Exception as e:
+                print(f"Error notificando al negocio: {e}")
+
+            try:
                 enviar_confirmacion(
                     email_cliente=email_cliente,
                     nombre_cliente=nombre_cliente,
@@ -635,11 +860,6 @@ def reserva_publica(slug):
 
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
-
-    servicios = Servicio.query.filter_by(
-        negocio_id=negocio.id,
-        activo=True
-    ).all()
 
     return render_template(
         "reserva_publica.html",

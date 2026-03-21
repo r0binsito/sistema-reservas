@@ -152,3 +152,11 @@ if (hamburguesa && navLinks) {
         });
     });
 }
+
+function mostrarModalUpgrade(titulo, desc) {
+    const modal = document.getElementById('modal-upgrade-limite');
+    if (!modal) return;
+    if (titulo) document.getElementById('modal-limite-titulo').textContent = titulo;
+    if (desc) document.getElementById('modal-limite-desc').textContent = desc;
+    modal.style.display = 'flex';
+}

@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block body_class %}sin-navbar planes-page{% endblock %}
+
+{% block titulo %}Actualizar plan — Reserfy{% endblock %}
+
+{% block page_content %}
+
+<div class="planes-bg">
+    <div class="planes-particle planes-particle-1"></div>
+    <div class="planes-particle planes-particle-2"></div>
+    <div class="planes-particle planes-particle-3"></div>
+    <div class="planes-particle planes-particle-4"></div>
+
+    <div class="planes-wrap">
+
+        <div class="planes-header">
+            <div class="planes-logo-wrap">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" class="planes-logo" alt="Reserfy">
+                <span class="planes-logo-text">Reserfy</span>
+            </div>
+
+            <div class="upgrade-plan-actual">
+                Plan actual:
+                <span class="upgrade-plan-badge upgrade-plan-{{ negocio.plan or 'trial' }}">
+                    {{ (negocio.plan or 'trial') | upper }}
+                </span>
+                {% if dias_restantes is not none %}
+                <span class="upgrade-trial-dias">{{ dias_restantes }} días restantes</span>
+                {% endif %}
+            </div>
+
+            <h1 class="planes-titulo">Actualiza tu plan</h1>
+            <p class="planes-subtitulo">Elige el plan que mejor se adapta a tu negocio</p>
+
+            <div class="planes-toggle-wrap">
+                <span class="planes-toggle-label" id="label-mensual">Mensual</span>
+                <div class="planes-toggle" id="toggle-billing" onclick="toggleBilling()">
+                    <div class="planes-toggle-circle" id="toggle-circle"></div>
+                </div>
+                <span class="planes-toggle-label" id="label-anual">
+                    Anual
+                    <span class="planes-ahorro-badge">Ahorra 2 meses</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="planes-grid planes-grid-3">
+
+            <!-- Starter -->
+            <div class="plan-card plan-card-starter {% if negocio.plan == 'starter' %}plan-card-actual{% endif %}">
+                <div class="plan-card-glow plan-card-glow-starter"></div>
+                {% if negocio.plan == 'starter' %}
+                <div class="plan-actual-badge">✓ Plan actual</div>
+                {% endif %}
+                <div class="plan-card-inner">
+                    <div class="plan-emoji">⚡</div>
+                    <h2 class="plan-nombre">Starter</h2>
+                    <p class="plan-descripcion">Para negocios que están comenzando</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda">$</span>
+                            <span class="plan-monto" id="starter-precio">9.99</span>
+                        </div>
+                        <span class="plan-periodo" id="starter-periodo">por mes</span>
+                        <p class="plan-anual-detalle" id="starter-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature"><span class="plan-check">✓</span>50 reservas por mes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>30 clientes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>3 servicios</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Estadísticas</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Soporte prioritario</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Múltiples usuarios</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                    </ul>
+                    {% if negocio.plan == 'starter' %}
+                    <button class="plan-btn plan-btn-starter" disabled>Plan actual</button>
+                    {% else %}
+                    <button class="plan-btn plan-btn-starter" onclick="abrirStripe('starter')">
+                        Contratar Starter →
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Pro -->
+            <div class="plan-card plan-card-pro {% if negocio.plan == 'pro' %}plan-card-actual{% endif %}">
+                <div class="plan-card-glow plan-card-glow-pro"></div>
+                {% if negocio.plan == 'pro' %}
+                <div class="plan-actual-badge plan-actual-badge-pro">✓ Plan actual</div>
+                {% else %}
+                <div class="plan-popular-badge">🔥 Más Popular</div>
+                {% endif %}
+                <div class="plan-card-inner">
+                    <div class="plan-emoji">🚀</div>
+                    <h2 class="plan-nombre plan-nombre-pro">Pro</h2>
+                    <p class="plan-descripcion">Para crecer sin límites</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda plan-moneda-pro">$</span>
+                            <span class="plan-monto plan-monto-pro" id="pro-precio">19.99</span>
+                        </div>
+                        <span class="plan-periodo" id="pro-periodo">por mes</span>
+                        <p class="plan-anual-detalle" id="pro-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Reservas ilimitadas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Clientes ilimitados</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Servicios ilimitados</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Estadísticas básicas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Soporte prioritario</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Hasta 3 usuarios</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                    </ul>
+                    {% if negocio.plan == 'pro' %}
+                    <button class="plan-btn plan-btn-pro" disabled>Plan actual</button>
+                    {% else %}
+                    <button class="plan-btn plan-btn-pro" onclick="abrirStripe('pro')">
+                        Contratar Pro →
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Elite -->
+            <div class="plan-card plan-card-elite {% if negocio.plan == 'elite' %}plan-card-actual{% endif %}">
+                <div class="plan-card-glow plan-card-glow-elite"></div>
+                {% if negocio.plan == 'elite' %}
+                <div class="plan-elite-badge">✓ Plan actual</div>
+                {% else %}
+                <div class="plan-elite-badge">👑 Elite</div>
+                {% endif %}
+                <div class="plan-elite-stars">
+                    <span class="elite-star" style="top:10%; left:5%">✦</span>
+                    <span class="elite-star" style="top:20%; right:8%">✦</span>
+                    <span class="elite-star" style="top:60%; left:3%">✦</span>
+                    <span class="elite-star" style="bottom:15%; right:6%">✦</span>
+                </div>
+                <div class="plan-card-inner plan-card-inner-elite">
+                    <div class="plan-emoji">👑</div>
+                    <h2 class="plan-nombre plan-nombre-elite">Elite</h2>
+                    <p class="plan-descripcion plan-descripcion-elite">Experiencia premium sin límites</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda plan-moneda-elite">$</span>
+                            <span class="plan-monto plan-monto-elite" id="elite-precio">39.99</span>
+                        </div>
+                        <span class="plan-periodo" id="elite-periodo">por mes</span>
+                        <p class="plan-anual-detalle plan-anual-detalle-elite" id="elite-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Reservas ilimitadas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Clientes ilimitados</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Servicios ilimitados</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Estadísticas avanzadas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Soporte dedicado 24/7</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Hasta 5 usuarios</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Sin marca de agua Reserfy</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Personalización total</li>
+                    </ul>
+                    {% if negocio.plan == 'elite' %}
+                    <button class="plan-btn plan-btn-elite" disabled>Plan actual</button>
+                    {% else %}
+                    <button class="plan-btn plan-btn-elite" onclick="abrirStripe('elite')">
+                        Contratar Elite →
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <p class="planes-nota">🔒 Pago seguro con Stripe · Cancela cuando quieras</p>
+
+        <div style="text-align:center; margin-top:1rem;">
+            <a href="{{ url_for('dashboard') }}" class="upgrade-volver">← Volver al dashboard</a>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal Stripe Coming Soon -->
+<div class="modal-stripe-overlay" id="modal-stripe">
+    <div class="modal-stripe-box">
+        <div class="modal-stripe-icon">🔒</div>
+        <h3 class="modal-stripe-titulo">Pago seguro con Stripe</h3>
+        <p class="modal-stripe-desc">La integración de pagos estará disponible muy pronto. Por ahora contáctanos directamente para activar tu plan.</p>
+        <div class="modal-stripe-plan" id="modal-stripe-plan"></div>
+        <a href="https://wa.me/18295551234?text=Hola, quiero contratar el plan " id="modal-stripe-wa" class="modal-stripe-btn-wa">
+            💬 Contactar por WhatsApp
+        </a>
+        <button onclick="cerrarStripe()" class="modal-stripe-btn-cancelar">Cerrar</button>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/planes.js') }}"></script>
+<script src="{{ url_for('static', filename='js/upgrade.js') }}"></script>
+
+{% endblock %}

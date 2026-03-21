@@ -10,6 +10,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
 </head>
 
+<!-- Modal upgrade límite -->
+<div class="modal-stripe-overlay" id="modal-upgrade-limite" style="display:none;">
+    <div class="modal-stripe-box">
+        <div class="modal-stripe-icon">⚡</div>
+        <h3 class="modal-stripe-titulo" id="modal-limite-titulo">Límite alcanzado</h3>
+        <p class="modal-stripe-desc" id="modal-limite-desc">Has alcanzado el límite de tu plan actual.</p>
+        <a href="{{ url_for('upgrade') }}" class="plan-btn plan-btn-pro" style="display:block; text-decoration:none; text-align:center; margin-bottom:0.8rem;">
+            Ver planes disponibles →
+        </a>
+        <button onclick="document.getElementById('modal-upgrade-limite').style.display='none'" class="modal-stripe-btn-cancelar">
+            Cerrar
+        </button>
+    </div>
+</div>
+
 <body class="{% block body_class %}{% endblock %}">
 
     {% block navbar %}
@@ -42,6 +57,20 @@
         </div>
     </nav>
     {% endblock %}
+
+    {% if current_user.is_authenticated %}
+    {% if trial_expirado %}
+    <div class="banner-trial banner-trial-expirado">
+        <span>⚠️ Tu período de prueba ha expirado.</span>
+        <a href="{{ url_for('elegir_plan') }}" class="banner-trial-btn">Elige un plan para continuar →</a>
+    </div>
+    {% elif dias_restantes is not none and dias_restantes <= 7 %}
+    <div class="banner-trial banner-trial-warning">
+        <span>⏳ Tu prueba gratis vence en <strong>{{ dias_restantes }} días</strong>.</span>
+        <a href="{{ url_for('elegir_plan') }}" class="banner-trial-btn">Ver planes →</a>
+    </div>
+    {% endif %}
+{% endif %}
 
     {% block banner %}{% endblock %}
 
