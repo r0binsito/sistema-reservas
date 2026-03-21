@@ -17,6 +17,12 @@ import cloudinary.uploader
 from flask import g
 from flask_dance.consumer import oauth_authorized
 from flask_dance.contrib.google import google
+import secrets
+import ssl
+import certifi
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 load_dotenv()
 
@@ -310,6 +316,81 @@ def login():
         return render_template("login.html", error="Email o contraseña incorrectos")
 
     return render_template("login.html")
+
+@app.route("/recuperar-password", methods=["GET", "POST"])
+def recuperar_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        if usuario:
+            token = secrets.token_urlsafe(32)
+            usuario.reset_token = token
+            usuario.reset_token_expira = datetime.utcnow() + timedelta(hours=2)
+            db.session.commit()
+
+            link = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reset-password/{token}"
+
+            enviar_email(
+                destinatario=email,
+                asunto="Recupera tu contraseña — Reserfy",
+                contenido_html=f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #912A5C, #FA8F3E); padding: 2rem; text-align: center; border-radius: 12px 12px 0 0;">
+                        <h1 style="color: white; margin: 0;">🔐 Recuperar contraseña</h1>
+                    </div>
+                    <div style="background: #f8f8f8; padding: 2rem; border-radius: 0 0 12px 12px;">
+                        <p>Hola, recibimos una solicitud para recuperar tu contraseña.</p>
+                        <p>Haz clic en el botón para crear una nueva contraseña. Este link expira en <strong>2 horas</strong>.</p>
+                        <div style="text-align: center; margin: 2rem 0;">
+                            <a href="{link}" style="background: linear-gradient(135deg, #912A5C, #FA8F3E); color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 700;">
+                                Crear nueva contraseña →
+                            </a>
+                        </div>
+                        <p style="color: #888; font-size: 0.85rem;">Si no solicitaste esto, ignora este email.</p>
+                        <p style="color: #aaa; font-size: 0.78rem;">O copia este link: {link}</p>
+                    </div>
+                </div>
+                """
+            )
+
+        # Siempre mostrar el mismo mensaje por seguridad
+        return render_template("recuperar_password.html",
+            mensaje="Si ese email existe, recibirás un link en los próximos minutos.")
+
+    return render_template("recuperar_password.html")
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    usuario = Usuario.query.filter_by(reset_token=token).first()
+
+    if not usuario or not usuario.reset_token_expira:
+        return render_template("reset_password.html", error="Link inválido o expirado.")
+
+    if datetime.utcnow() > usuario.reset_token_expira:
+        return render_template("reset_password.html", error="Este link ha expirado. Solicita uno nuevo.")
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirmar = request.form.get("confirmar")
+
+        if password != confirmar:
+            return render_template("reset_password.html",
+                token=token, error="Las contraseñas no coinciden.")
+
+        if len(password) < 8:
+            return render_template("reset_password.html",
+                token=token, error="La contraseña debe tener al menos 8 caracteres.")
+
+        usuario.password_hash = generate_password_hash(password)
+        usuario.reset_token = None
+        usuario.reset_token_expira = None
+        db.session.commit()
+
+        return render_template("reset_password.html", exito=True)
+
+    return render_template("reset_password.html", token=token)
 
 # --- Configurar Negocio ---
 @app.route("/configurar-negocio", methods=["GET", "POST"])
@@ -647,9 +728,14 @@ def enviar_email(destinatario, asunto, contenido_html):
             subject=asunto,
             html_content=contenido_html
         )
-        sg.send(mensaje)
+        response = sg.send(mensaje)
+        print(f"✅ Email enviado: {response.status_code}")
     except Exception as e:
-        print(f"Error enviando email: {e}")
+        print(f"Error completo: {e}")
+        if hasattr(e, 'body'):
+            print(f"Body: {e.body}")
+        if hasattr(e, 'status_code'):
+            print(f"Status: {e.status_code}")
 
 def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token, timezone="America/Santo_Domingo"):
     tz = pytz.timezone(timezone)

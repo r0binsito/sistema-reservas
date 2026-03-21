@@ -44,6 +44,8 @@ class Usuario(UserMixin, db.Model):
     password_hash = db.Column(db.String(200), nullable=False)
     negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False)
     negocio = db.relationship("Negocio", backref="usuarios")
+    reset_token = db.Column(db.String(100), nullable=True)
+    reset_token_expira = db.Column(db.DateTime, nullable=True)
 
 class Horario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
