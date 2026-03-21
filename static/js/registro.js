@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 consejo.style.display = 'none';
                 sessionStorage.setItem(key, '1');
-            }, 5000);
+            }, 10000);
         }
     }
 });
