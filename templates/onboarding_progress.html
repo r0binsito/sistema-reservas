@@ -1,0 +1,22 @@
+{% set paso = paso | default(1) %}
+
+<div class="onboarding-mini">
+    <div class="onboarding-mini-step {% if paso >= 1 %}{% if paso == 1 %}activo{% else %}completado{% endif %}{% endif %}">
+        <div class="onboarding-mini-circle">{% if paso > 1 %}✓{% else %}1{% endif %}</div>
+        <span>Registro</span>
+    </div>
+    <div class="onboarding-mini-line {% if paso > 1 %}completada{% endif %}">
+        <div class="onboarding-mini-fill"></div>
+    </div>
+    <div class="onboarding-mini-step {% if paso >= 2 %}{% if paso == 2 %}activo{% else %}completado{% endif %}{% endif %}">
+        <div class="onboarding-mini-circle">{% if paso > 2 %}✓{% else %}2{% endif %}</div>
+        <span>Tu Plan</span>
+    </div>
+    <div class="onboarding-mini-line {% if paso > 2 %}completada{% endif %}">
+        <div class="onboarding-mini-fill"></div>
+    </div>
+    <div class="onboarding-mini-step {% if paso >= 3 %}activo{% endif %}">
+        <div class="onboarding-mini-circle">3</div>
+        <span>Tu Negocio</span>
+    </div>
+</div>

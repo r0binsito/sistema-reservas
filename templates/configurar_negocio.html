@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block body_class %}sin-navbar{% endblock %}
+
+{% block titulo %}Configura tu negocio — Reserfy{% endblock %}
+
+{% block page_content %}
+
+<div class="registro-container">
+
+    <!-- Izquierda -->
+    <div class="registro-izquierda">
+        <div class="registro-izq-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Reserfy">
+            <span>Reserfy</span>
+        </div>
+        <h2 class="registro-izq-titulo">
+            ¡Ya casi estás listo!<br>
+            <span style="opacity:0.85;">Cuéntanos sobre tu negocio</span>
+        </h2>
+        <p class="registro-izq-subtitulo">
+            Esta información aparecerá en tu página pública de reservas.
+        </p>
+        <div class="registro-beneficios">
+            <div class="registro-beneficio">
+                <div class="registro-beneficio-icon">🏪</div>
+                <div class="registro-beneficio-texto">
+                    <strong>Nombre del negocio</strong>
+                    <span>Aparece en tu página pública</span>
+                </div>
+            </div>
+            <div class="registro-beneficio">
+                <div class="registro-beneficio-icon">✂️</div>
+                <div class="registro-beneficio-texto">
+                    <strong>Tipo de negocio</strong>
+                    <span>Precargamos tus servicios automáticamente</span>
+                </div>
+            </div>
+            <div class="registro-beneficio">
+                <div class="registro-beneficio-icon">🎨</div>
+                <div class="registro-beneficio-texto">
+                    <strong>Logo y eslogan</strong>
+                    <span>Genera más confianza en tus clientes</span>
+                </div>
+            </div>
+        </div>
+        <div class="registro-consejo">
+            <span>💡</span>
+            <p><strong>Consejo:</strong> Selecciona bien tu tipo de negocio — precargamos servicios típicos para
+                ahorrarte tiempo.</p>
+        </div>
+    </div>
+
+    <!-- Derecha -->
+    <div class="registro-derecha">
+        <div class="registro-form-wrap">
+
+            {% include 'onboarding_progress.html' %}
+
+            <h2 class="registro-titulo">Configura tu negocio</h2>
+            <p class="registro-subtitulo">Puedes editar esto después desde tu perfil</p>
+
+            <div class="consejo-senior-dark" id="consejo-senior">
+                <span>⚙️</span>
+                <p><strong>Configuración inicial:</strong> Selecciona tu tipo de negocio y precargaremos tus servicios
+                    automáticamente.</p>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data">
+
+                <!-- Logo Uploader Pro -->
+                <div class="logo-dropzone" id="logo-dropzone" onclick="document.getElementById('logo-input').click()">
+                    <div id="dropzone-contenido">
+                        <span class="logo-dropzone-icon">✨</span>
+                        <p class="logo-dropzone-titulo">Arrastra tu logo aquí o haz clic</p>
+                        <p class="logo-dropzone-sub">PNG, JPG · Máx 5MB · Se recortará en círculo</p>
+                        <button type="button" class="logo-dropzone-btn">Seleccionar imagen</button>
+                    </div>
+                    <input type="file" id="logo-input" accept="image/*" style="display:none"
+                        onchange="iniciarCropper(this)">
+                    <input type="hidden" name="logo_recortado" id="logo-recortado">
+                </div>
+
+                <div class="form-grupo">
+                    <label>Nombre del negocio *</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Barbería Don Juan"
+                        value="{{ negocio.nombre if negocio.nombre != 'Mi negocio' else '' }}">
+                </div>
+
+                <div class="form-grupo">
+                    <label>Tipo de negocio *</label>
+                    <select name="tipo" required onchange="mostrarOtro(this.value)">
+                        <option value="">Selecciona un tipo</option>
+                        <option value="Barbería">✂️ Barbería</option>
+                        <option value="Salón de belleza">💅 Salón de belleza</option>
+                        <option value="Consultorio médico">🏥 Consultorio médico</option>
+                        <option value="Consultorio dental">🦷 Consultorio dental</option>
+                        <option value="Spa">🧖 Spa</option>
+                        <option value="Restaurante">🍽️ Restaurante</option>
+                        <option value="Gimnasio">💪 Gimnasio</option>
+                        <option value="Otro">🏢 Otro</option>
+                    </select>
+                </div>
+
+                <div class="form-grupo" id="tipo-otro-wrap" style="display:none;">
+                    <label>Especifica tu tipo de negocio</label>
+                    <input type="text" name="tipo_personalizado" placeholder="Ej: Academia de música">
+                </div>
+
+                <div class="form-grupo">
+                    <label>Eslogan</label>
+                    <input type="text" name="eslogan" placeholder="Ej: El mejor corte de tu vida">
+                </div>
+
+                <div class="form-fila">
+                    <div class="form-grupo">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono" placeholder="809-555-1234">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Dirección</label>
+                        <input type="text" name="direccion" placeholder="Calle Principal #1">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary registro-submit">
+                    Guardar y entrar al dashboard →
+                </button>
+
+                <p class="registro-terminos">
+                    <a href="{{ url_for('dashboard') }}">Omitir por ahora →</a>
+                </p>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal Cropper Pro -->
+<div id="modal-cropper" class="modal-cropper-overlay">
+    <div class="modal-cropper-box">
+        <h3 class="modal-cropper-titulo">✂️ Ajusta tu logo</h3>
+
+        <div class="modal-cropper-layout">
+            <div class="modal-cropper-img-wrap">
+                <img id="imagen-cropper" style="max-width:100%;">
+            </div>
+            <div class="modal-cropper-preview-wrap">
+                <p class="modal-cropper-preview-label">Previsualización</p>
+                <div class="modal-cropper-preview-circle">
+                    <img id="preview-grande" src="" alt="">
+                </div>
+                <div class="modal-cropper-preview-sm">
+                    <img id="preview-chico" src="" alt="">
+                </div>
+                <p class="modal-cropper-preview-sizes">Grande · Pequeño</p>
+            </div>
+        </div>
+
+        <div class="modal-cropper-controles">
+            <div class="modal-cropper-control">
+                <span class="modal-cropper-control-label">🔍 Zoom</span>
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarZoom(-0.1)">−</button>
+                <input type="range" class="modal-cropper-slider" id="slider-zoom" min="0.1" max="3" step="0.05"
+                    value="1" oninput="actualizarZoom(this.value)">
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarZoom(0.1)">+</button>
+                <span class="modal-cropper-control-value" id="valor-zoom">1x</span>
+            </div>
+            <div class="modal-cropper-control">
+                <span class="modal-cropper-control-label">🔄 Rotación</span>
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarRotacion(-1)">−</button>
+                <input type="range" class="modal-cropper-slider" id="slider-rotacion" min="-180" max="180" step="1"
+                    value="0" oninput="actualizarRotacion(this.value)">
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarRotacion(1)">+</button>
+                <span class="modal-cropper-control-value" id="valor-rotacion">0°</span>
+            </div>
+        </div>
+
+        <div class="modal-cropper-acciones">
+            <button type="button" onclick="cancelarCropper()" class="btn">Cancelar</button>
+            <button type="button" onclick="confirmarCropper()" class="btn btn-primary">✓ Confirmar y guardar</button>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="{{ url_for('static', filename='js/registro.js') }}"></script>
+
+{% endblock %}

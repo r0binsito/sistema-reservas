@@ -3,6 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 import uuid
 import pytz
+from datetime import datetime, timedelta
 
 db = SQLAlchemy()
 
@@ -10,15 +11,15 @@ class Negocio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    slug = db.Column(db.String(100), unique=True, nullable=True)
-    timezone = db.Column(db.String(50), nullable=False, default="America/Santo_Domingo")
-    tipo = db.Column(db.String(50), nullable=True)
-    eslogan = db.Column(db.String(200), nullable=True)
-    telefono = db.Column(db.String(20), nullable=True)
-    direccion = db.Column(db.String(200), nullable=True)
-    logo_url = db.Column(db.String(300), nullable=True)
-    clientes = db.relationship("Cliente", backref="negocio", lazy=True)
-    servicios = db.relationship("Servicio", backref="negocio", lazy=True)
+    slug = db.Column(db.String(100), unique=True)
+    timezone = db.Column(db.String(50), default="America/Santo_Domingo")
+    tipo = db.Column(db.String(50))
+    eslogan = db.Column(db.String(200))
+    telefono = db.Column(db.String(20))
+    direccion = db.Column(db.String(200))
+    logo_url = db.Column(db.String(300))
+    plan = db.Column(db.String(20), default="trial")
+    trial_expira = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=14))
 
 class Cliente(db.Model):
     id = db.Column(db.Integer, primary_key=True)

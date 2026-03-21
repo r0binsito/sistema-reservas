@@ -143,3 +143,17 @@
     90% { opacity: 0; transform: translateY(-8px); }
     100% { opacity: 0; transform: translateY(-8px); }
 }
+
+
+/* ===== CONSEJO ANIMADO ===== */
+@keyframes consejoEntrar {
+    0% { opacity: 0; transform: translateY(-12px); max-height: 0; padding: 0; margin-bottom: 0; }
+    15% { opacity: 1; transform: translateY(0); max-height: 200px; padding: 0.9rem 1rem; margin-bottom: 1.5rem; }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-8px); max-height: 0; padding: 0; margin-bottom: 0; }
+}
+
+.consejo-animado {
+    animation: consejoEntrar 10s ease forwards;
+    overflow: hidden;
+}

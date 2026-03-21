@@ -77,12 +77,14 @@ def generar_slug(nombre):
     slug = re.sub(r'[^a-z0-9\s-]', '', slug)
     slug = re.sub(r'\s+', '-', slug.strip())
 
-    # Si el slug ya existe, agrega un número al final
-    slug_base = slug
+    slug_base = slug[:50]  # limitar longitud
+    slug = slug_base
     contador = 1
     while Negocio.query.filter_by(slug=slug).first():
         slug = f"{slug_base}-{contador}"
         contador += 1
+        if contador > 100:  # límite de seguridad
+            break
 
     return slug
 
@@ -136,56 +138,24 @@ PLANTILLAS_SERVICIOS = {
 def index():
     return render_template("index.html")
 
+# --- Registro ---
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
     if request.method == "POST":
-        nombre = request.form["nombre"]
         email = request.form["email"]
         password = request.form["password"]
 
-        if Negocio.query.filter_by(email=email).first():
-            return render_template("registro.html", error="Ya existe un negocio con ese email.")
+        if Usuario.query.filter_by(email=email).first():
+            return render_template("registro.html", error="Ya existe una cuenta con ese email.", paso=1)
 
-        negocio = Negocio(nombre=nombre, email=email)
-        negocio.slug = generar_slug(nombre)
-        negocio.tipo = request.form.get("tipo")
-        negocio.eslogan = request.form.get("eslogan")
-        negocio.telefono = request.form.get("telefono")
-        negocio.direccion = request.form.get("direccion")
-
+        # Crear negocio vacío temporalmente
+        negocio = Negocio(
+            nombre="Mi negocio",
+            email=email
+        )
+        negocio.slug = generar_slug(email.split("@")[0])
         db.session.add(negocio)
         db.session.commit()
-
-        # Precargar servicios según tipo de negocio
-        tipo_negocio = request.form.get("tipo")
-        if tipo_negocio and tipo_negocio in PLANTILLAS_SERVICIOS:
-            for s in PLANTILLAS_SERVICIOS[tipo_negocio]:
-                servicio = Servicio(
-                    nombre=s["nombre"],
-                    duracion_min=s["duracion_min"],
-                    precio=s["precio"],
-                    negocio_id=negocio.id
-                )
-                db.session.add(servicio)
-            db.session.commit()
-
-        # Procesar logo recortado de Cropper.js
-        logo_recortado = request.form.get("logo_recortado")
-        if logo_recortado and logo_recortado.startswith("data:image"):
-            try:
-                resultado = cloudinary.uploader.upload(
-                    logo_recortado,
-                    folder="reserfy/logos",
-                    public_id=f"negocio_{negocio.id}",
-                    overwrite=True,
-                    transformation=[
-                        {"width": 400, "height": 400, "crop": "fill", "gravity": "face"}
-                    ]
-                )
-                negocio.logo_url = resultado["secure_url"]
-                db.session.commit()
-            except Exception as e:
-                print(f"Error subiendo logo: {e}")
 
         usuario = Usuario(
             email=email,
@@ -196,9 +166,9 @@ def registro():
         db.session.commit()
 
         login_user(usuario)
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("elegir_plan"))
 
-    return render_template("registro.html")
+    return render_template("registro.html", paso=1)
 
 # --- Login ---
 @app.route("/login", methods=["GET", "POST"])
@@ -216,6 +186,66 @@ def login():
         return "Email o contraseña incorrectos"
 
     return render_template("login.html")
+
+# --- Configurar Negocio ---
+@app.route("/configurar-negocio", methods=["GET", "POST"])
+@login_required
+def configurar_negocio():
+    negocio = current_user.negocio
+    if request.method == "POST":
+        negocio.nombre = request.form.get("nombre", "Mi negocio")
+        negocio.tipo = request.form.get("tipo")
+        tipo_personalizado = request.form.get("tipo_personalizado")
+        if negocio.tipo == "Otro" and tipo_personalizado:
+            negocio.tipo = tipo_personalizado
+        negocio.eslogan = request.form.get("eslogan")
+        negocio.telefono = request.form.get("telefono")
+        negocio.direccion = request.form.get("direccion")
+        negocio.slug = generar_slug(negocio.nombre)
+
+        # Precargar servicios según tipo
+        if negocio.tipo and negocio.tipo in PLANTILLAS_SERVICIOS:
+            servicios_existentes = Servicio.query.filter_by(negocio_id=negocio.id).count()
+            if servicios_existentes == 0:
+                for s in PLANTILLAS_SERVICIOS[negocio.tipo]:
+                    servicio = Servicio(
+                        nombre=s["nombre"],
+                        duracion_min=s["duracion_min"],
+                        precio=s["precio"],
+                        negocio_id=negocio.id
+                    )
+                    db.session.add(servicio)
+
+        # Logo
+        logo_recortado = request.form.get("logo_recortado")
+        if logo_recortado and logo_recortado.startswith("data:image"):
+            try:
+                resultado = cloudinary.uploader.upload(
+                    logo_recortado,
+                    folder="reserfy/logos",
+                    public_id=f"negocio_{negocio.id}",
+                    overwrite=True,
+                    transformation=[{"width": 400, "height": 400, "crop": "fill"}]
+                )
+                negocio.logo_url = resultado["secure_url"]
+            except Exception as e:
+                print(f"Error subiendo logo: {e}")
+
+        db.session.commit()
+        return redirect(url_for("dashboard"))
+
+    return render_template("configurar_negocio.html", negocio=negocio, paso=3)
+
+@app.route("/elegir-plan", methods=["GET", "POST"])
+@login_required
+def elegir_plan():
+    if request.method == "POST":
+        plan = request.form.get("plan")
+        if plan in ["starter", "pro", "elite"]:
+            current_user.negocio.plan = plan
+            db.session.commit()
+        return redirect(url_for("configurar_negocio"))
+    return render_template("elegir_plan.html", paso=2)
 
 # --- Google OAuth callback ---
 @app.route("/auth/google/authorized")
@@ -236,12 +266,10 @@ def google_login_callback():
         login_user(usuario)
         return redirect(url_for("dashboard"))
 
-    negocio = Negocio.query.filter_by(email=email).first()
-    if not negocio:
-        negocio = Negocio(nombre=nombre, email=email)
-        negocio.slug = generar_slug(nombre)
-        db.session.add(negocio)
-        db.session.commit()
+    negocio = Negocio(nombre="Mi negocio", email=email)
+    negocio.slug = generar_slug(email.split("@")[0])
+    db.session.add(negocio)
+    db.session.commit()
 
     usuario = Usuario(
         email=email,
@@ -252,7 +280,7 @@ def google_login_callback():
     db.session.commit()
 
     login_user(usuario)
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("elegir_plan"))
 
 # --- Iniciar login con Google ---
 @app.route("/auth/google")
@@ -651,6 +679,17 @@ def cancelar_reserva(reserva_id):
 
 with app.app_context():
     db.create_all()
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN plan VARCHAR(20) DEFAULT 'trial'"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN trial_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
 
 # --- Gestionar reserva como cliente (sin login) ---
 @app.route("/reserva/<token>/gestionar", methods=["GET", "POST"])

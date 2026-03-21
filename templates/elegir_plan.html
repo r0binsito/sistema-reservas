@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block body_class %}sin-navbar planes-page{% endblock %}
+
+{% block titulo %}Elige tu plan — Reserfy{% endblock %}
+
+{% block page_content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="position:fixed; top:1rem; right:1rem; z-index:999; max-width:320px;">
+    {% for category, message in messages %}
+    <div class="alerta alerta-{{ category }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="planes-bg">
+    <div class="planes-particle planes-particle-1"></div>
+    <div class="planes-particle planes-particle-2"></div>
+    <div class="planes-particle planes-particle-3"></div>
+    <div class="planes-particle planes-particle-4"></div>
+
+    <div class="planes-wrap">
+
+        <div class="planes-header">
+            <div class="planes-logo-wrap">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" class="planes-logo" alt="Reserfy">
+                <span class="planes-logo-text">Reserfy</span>
+            </div>
+            <div class="planes-badge">14 días gratis en cualquier plan</div>
+            <h1 class="planes-titulo">Elige tu plan</h1>
+            <p class="planes-subtitulo">Sin tarjeta requerida · Cancela cuando quieras</p>
+
+            {% include 'onboarding_progress.html' %}
+
+            <div class="consejo-senior-dark consejo-animado" id="consejo-senior">
+                <span>💡</span>
+                <p><strong>Consejo:</strong> El plan Pro tiene la mejor relación calidad-precio. Todos los planes incluyen 14 días gratis sin tarjeta.</p>
+            </div>
+
+            <div class="planes-toggle-wrap">
+                <span class="planes-toggle-label" id="label-mensual">Mensual</span>
+                <div class="planes-toggle" id="toggle-billing" onclick="toggleBilling()">
+                    <div class="planes-toggle-circle" id="toggle-circle"></div>
+                </div>
+                <span class="planes-toggle-label" id="label-anual">
+                    Anual
+                    <span class="planes-ahorro-badge">Ahorra 2 meses</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="planes-grid planes-grid-3">
+
+            <!-- Starter -->
+            <div class="plan-card plan-card-starter">
+                <div class="plan-card-glow plan-card-glow-starter"></div>
+                <div class="plan-card-inner">
+                    <div class="plan-emoji">⚡</div>
+                    <h2 class="plan-nombre">Starter</h2>
+                    <p class="plan-descripcion">Para negocios que están comenzando</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda">$</span>
+                            <span class="plan-monto" id="starter-precio">9.99</span>
+                        </div>
+                        <span class="plan-periodo" id="starter-periodo">por mes</span>
+                        <p class="plan-anual-detalle" id="starter-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature"><span class="plan-check">✓</span>50 reservas por mes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>30 clientes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>3 servicios</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Estadísticas</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Soporte prioritario</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Múltiples usuarios</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                    </ul>
+                    <form method="POST">
+                        <input type="hidden" name="plan" value="starter">
+                        <button type="submit" class="plan-btn plan-btn-starter">
+                            Empezar prueba gratis →
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pro -->
+            <div class="plan-card plan-card-pro">
+                <div class="plan-card-glow plan-card-glow-pro"></div>
+                <div class="plan-popular-badge">🔥 Más Popular</div>
+                <div class="plan-card-inner">
+                    <div class="plan-emoji">🚀</div>
+                    <h2 class="plan-nombre plan-nombre-pro">Pro</h2>
+                    <p class="plan-descripcion">Para crecer sin límites</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda plan-moneda-pro">$</span>
+                            <span class="plan-monto plan-monto-pro" id="pro-precio">19.99</span>
+                        </div>
+                        <span class="plan-periodo" id="pro-periodo">por mes</span>
+                        <p class="plan-anual-detalle" id="pro-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Reservas ilimitadas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Clientes ilimitados</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Servicios ilimitados</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Estadísticas básicas</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Soporte prioritario</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Hasta 3 usuarios</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                    </ul>
+                    <form method="POST">
+                        <input type="hidden" name="plan" value="pro">
+                        <button type="submit" class="plan-btn plan-btn-pro">
+                            Empezar prueba gratis →
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Elite -->
+            <div class="plan-card plan-card-elite">
+                <div class="plan-card-glow plan-card-glow-elite"></div>
+                <div class="plan-elite-badge">👑 Elite</div>
+                <div class="plan-elite-stars">
+                    <span class="elite-star" style="top:10%; left:5%">✦</span>
+                    <span class="elite-star" style="top:20%; right:8%">✦</span>
+                    <span class="elite-star" style="top:60%; left:3%">✦</span>
+                    <span class="elite-star" style="bottom:15%; right:6%">✦</span>
+                </div>
+                <div class="plan-card-inner plan-card-inner-elite">
+                    <div class="plan-emoji">👑</div>
+                    <h2 class="plan-nombre plan-nombre-elite">Elite</h2>
+                    <p class="plan-descripcion plan-descripcion-elite">Experiencia premium sin límites</p>
+                    <div class="plan-precio-wrap">
+                        <div class="plan-precio">
+                            <span class="plan-moneda plan-moneda-elite">$</span>
+                            <span class="plan-monto plan-monto-elite" id="elite-precio">39.99</span>
+                        </div>
+                        <span class="plan-periodo" id="elite-periodo">por mes</span>
+                        <p class="plan-anual-detalle plan-anual-detalle-elite" id="elite-anual"></p>
+                    </div>
+                    <ul class="plan-features">
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Reservas ilimitadas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Clientes ilimitados</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Servicios ilimitados</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Página pública de reservas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Estadísticas avanzadas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Soporte dedicado 24/7</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Hasta 5 usuarios</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Sin marca de agua Reserfy</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Personalización total (logo, colores)</li>
+                    </ul>
+                    <form method="POST">
+                        <input type="hidden" name="plan" value="elite">
+                        <button type="submit" class="plan-btn plan-btn-elite">
+                            Empezar prueba gratis →
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+        <p class="planes-nota">🔒 Pago seguro · Sin compromisos · Cancela en cualquier momento</p>
+
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/planes.js') }}"></script>
+<script src="{{ url_for('static', filename='js/registro.js') }}"></script>
+
+{% endblock %}
