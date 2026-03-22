@@ -4,113 +4,229 @@
 
 {% block navbar %}
 <nav class="navbar">
-    <div class="nav-brand">📅 Reserfy</div>
+    <a href="{{ url_for('index') }}" class="nav-brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" class="nav-logo" alt="Reserfy">
+        <span class="nav-brand-text">Reserfy</span>
+    </a>
     <div class="nav-links">
         {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('ver_clientes') }}">Clientes</a>
-            {% if current_user.negocio.slug %}
-                <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
-            {% endif %}
-            <a href="{{ url_for('ver_servicios') }}">Servicios</a>
-            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
-            <a href="{{ url_for('configurar_horario') }}">Horario</a>
-            <a href="{{ url_for('logout') }}">Cerrar sesión</a>
+            <a href="{{ url_for('logout') }}">Salir</a>
         {% else %}
-            <a href="{{ url_for('index') }}" style="color: #ecf0f1;">¿Tienes un negocio? Regístrate gratis</a>
+            <a href="{{ url_for('registro') }}">¿Tienes un negocio? Regístrate gratis</a>
         {% endif %}
     </div>
 </nav>
 {% endblock %}
 
 {% block contenido %}
-<div class="card" style="max-width: 600px; margin: 0 auto;">
 
-    <!-- Logo y header del negocio -->
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-        {% if negocio.logo_url %}
-            <img src="{{ negocio.logo_url }}" alt="Logo de {{ negocio.nombre }}"
-                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; margin-bottom: 0.8rem;">
-        {% else %}
-            <div style="width: 100px; height: 100px; border-radius: 50%; background: #3498db; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem;">
-                <span style="color: white; font-size: 2.5rem;">📅</span>
+<div class="reserva-publica-wrap {% if negocio.plan == 'elite' %}reserva-elite{% endif %}">
+
+    {% if negocio.plan == 'elite' %}
+    <div class="reserva-elite-bg"></div>
+    {% endif %}
+
+    <!-- Header del negocio -->
+    <div class="reserva-negocio-header">
+        <div class="reserva-negocio-logo-wrap">
+            {% if negocio.logo_url %}
+                <img src="{{ negocio.logo_url }}" alt="{{ negocio.nombre }}" class="reserva-negocio-logo">
+            {% else %}
+                <div class="reserva-negocio-logo-placeholder">
+                    <span>📅</span>
+                </div>
+            {% endif %}
+        </div>
+        <div class="reserva-negocio-info">
+            <div class="reserva-negocio-nombre-wrap">
+                <h1 class="reserva-negocio-nombre">{{ negocio.nombre }}</h1>
+                {% if negocio.plan == 'elite' %}
+                <span class="reserva-verificado-badge">✓ Verificado</span>
+                {% endif %}
             </div>
-        {% endif %}
-        <h2 style="margin: 0;">{{ negocio.nombre }}</h2>
-        {% if negocio.tipo %}
-            <span style="background: #3498db; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">{{ negocio.tipo }}</span>
-        {% endif %}
-        {% if negocio.eslogan %}
-            <p style="color: #555; font-style: italic; margin-top: 0.5rem;">{{ negocio.eslogan }}</p>
-        {% endif %}
-        {% if negocio.telefono %}
-            <p style="color: #888; font-size: 0.9rem; margin: 0.3rem 0;">📞 {{ negocio.telefono }}</p>
-        {% endif %}
-        {% if negocio.direccion %}
-            <p style="color: #888; font-size: 0.9rem; margin: 0.3rem 0;">📍 {{ negocio.direccion }}</p>
-        {% endif %}
+            {% if negocio.tipo %}
+                <span class="badge badge-cyan">{{ negocio.tipo }}</span>
+            {% endif %}
+            {% if negocio.eslogan %}
+                <p class="reserva-negocio-eslogan">{{ negocio.eslogan }}</p>
+            {% endif %}
+            <div class="reserva-negocio-contacto">
+                {% if negocio.telefono %}
+                    <span class="reserva-contacto-item">📞 {{ negocio.telefono }}</span>
+                {% endif %}
+                {% if negocio.direccion %}
+                    <span class="reserva-contacto-item">📍 {{ negocio.direccion }}</span>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     {% if mensaje %}
-        <div class="alerta alerta-success">{{ mensaje }}</div>
-    {% else %}
-        <form method="POST">
-            <div class="form-grupo">
-                <label>Tu nombre</label>
-                <input type="text" name="nombre_cliente" required value="{{ request.form.get('nombre_cliente', '') }}">
-            </div>
-            <div class="form-grupo">
-                <label>Tu email</label>
-                <input type="email" name="email_cliente" required value="{{ request.form.get('email_cliente', '') }}">
-            </div>
-            <div class="form-grupo">
-                <label>Tu teléfono</label>
-                <input type="text" name="telefono_cliente" value="{{ request.form.get('telefono_cliente', '') }}">
-            </div>
-            <div class="form-grupo">
-                <label>Servicio</label>
-                <select name="servicio" style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                    {% for s in servicios %}
-                    <option value="{{ s.nombre }}" {{ 'selected' if request.form.get('servicio') == s.nombre }}>
-                        {{ s.nombre }} — {{ s.duracion_min }} min
-                        {% if s.precio %} — ${{ '%.2f' % s.precio }}{% endif %}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-grupo">
-                <label>Fecha</label>
-                <input type="date" name="fecha" required value="{{ request.form.get('fecha', '') }}">
-            </div>
-            <button type="submit" class="btn btn-primary">Ver disponibilidad</button>
-        </form>
+    <!-- Confirmación -->
+    <div class="reserva-confirmacion">
+        <div class="reserva-confirmacion-icon">✅</div>
+        <h2 class="reserva-confirmacion-titulo">¡Reserva confirmada!</h2>
+        <p class="reserva-confirmacion-texto">{{ mensaje }}</p>
+        <p class="reserva-confirmacion-sub">Recibirás un email de confirmación en los próximos minutos.</p>
+        <a href="{{ request.url }}" class="btn btn-primary reserva-nueva-btn">
+            Hacer otra reserva
+        </a>
+    </div>
 
-        {% if slots %}
-            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Horas disponibles</h3>
-            <form method="POST">
-                <input type="hidden" name="nombre_cliente" value="{{ request.form.get('nombre_cliente') }}">
-                <input type="hidden" name="email_cliente" value="{{ request.form.get('email_cliente') }}">
-                <input type="hidden" name="telefono_cliente" value="{{ request.form.get('telefono_cliente') }}">
-                <input type="hidden" name="servicio" value="{{ servicio_seleccionado }}">
-                <div class="slots-grid">
-                    {% for slot_local, slot_utc in slots %}
-                        <button type="submit" name="hora" value="{{ slot_utc }}" class="slot-btn">
-                            {{ slot_local.strftime('%I:%M %p') }}
-                        </button>
+    {% else %}
+
+    <!-- Pasos -->
+    <div class="reserva-steps">
+        <div class="reserva-step" id="step-ind-1">
+            <div class="reserva-step-circle">1</div>
+            <span class="reserva-step-label">Servicio</span>
+        </div>
+        <div class="reserva-step-line"></div>
+        <div class="reserva-step" id="step-ind-2">
+            <div class="reserva-step-circle">2</div>
+            <span class="reserva-step-label">Fecha y hora</span>
+        </div>
+        <div class="reserva-step-line"></div>
+        <div class="reserva-step" id="step-ind-3">
+            <div class="reserva-step-circle">3</div>
+            <span class="reserva-step-label">Tus datos</span>
+        </div>
+    </div>
+
+    <form method="POST" id="form-reserva">
+
+        <!-- Paso 1 — Servicios -->
+        <div class="reserva-panel" id="panel-1">
+            <div class="card">
+                <h2 class="reserva-panel-titulo">Selecciona un servicio</h2>
+                <div class="reserva-servicios-grid">
+                    {% for s in servicios %}
+                    <div class="reserva-servicio-card"
+                        data-nombre="{{ s.nombre }}"
+                        onclick="seleccionarServicio(this)">
+                        <div class="reserva-servicio-emoji">✂️</div>
+                        <div class="reserva-servicio-nombre">{{ s.nombre }}</div>
+                        <div class="reserva-servicio-info">
+                            <span>⏱ {{ s.duracion_min }} min</span>
+                            {% if s.precio %}
+                            <span class="reserva-servicio-precio">${{ '%.2f' % s.precio }}</span>
+                            {% endif %}
+                        </div>
+                        {% if negocio.plan in ['pro', 'elite'] %}
+                        <div class="reserva-disponibilidad-contador" id="contador-{{ loop.index }}">
+                            Cargando...
+                        </div>
+                        {% endif %}
+                    </div>
                     {% endfor %}
                 </div>
-            </form>
-        {% elif fecha_seleccionada %}
-            <p style="margin-top: 1rem; color: #888;">No hay disponibilidad para ese día.</p>
-        {% endif %}
+                <input type="hidden" name="servicio" id="servicio-hidden">
+                <div class="reserva-panel-nav">
+                    <div></div>
+                    <button type="button" class="btn btn-primary" onclick="irPaso(2)" id="btn-paso-2" disabled>
+                        Siguiente → Elegir fecha
+                    </button>
+                </div>
+            </div>
+        </div>
 
+        <!-- Paso 2 — Fecha y hora -->
+        <div class="reserva-panel" id="panel-2" style="display:none;">
+            <div class="card">
+                <h2 class="reserva-panel-titulo">Elige fecha y hora</h2>
+
+                {% if negocio.plan in ['pro', 'elite'] %}
+                <!-- Calendario visual Pro/Elite -->
+                <div class="reserva-calendario" id="reserva-calendario"></div>
+                <input type="hidden" name="fecha" id="fecha-hidden">
+                {% else %}
+                <!-- Input simple Starter -->
+                <div class="form-grupo">
+                    <label>Fecha *</label>
+                    <input type="date" name="fecha" id="fecha-input" required
+                        min="{{ now.strftime('%Y-%m-%d') }}"
+                        onchange="cargarSlots(this.value)">
+                </div>
+                {% endif %}
+
+                <div id="slots-wrap" style="margin-top:1.5rem; display:none;">
+                    <h3 class="reserva-slots-titulo">Horarios disponibles</h3>
+                    <div class="slots-grid" id="slots-container"></div>
+                </div>
+
+                <input type="hidden" name="hora" id="hora-hidden">
+
+                <div class="reserva-panel-nav">
+                    <button type="button" class="btn" onclick="irPaso(1)">← Atrás</button>
+                    <button type="button" class="btn btn-primary" onclick="irPaso(3)" id="btn-paso-3" disabled>
+                        Siguiente → Tus datos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paso 3 — Datos del cliente -->
+        <div class="reserva-panel" id="panel-3" style="display:none;">
+            <div class="card">
+                <h2 class="reserva-panel-titulo">Tus datos</h2>
+
+                <div id="datos-precargados-banner" style="display:none;" class="reserva-precargado-banner">
+                    <span>✓ Usamos tus datos de tu reserva anterior</span>
+                    <button type="button" onclick="limpiarDatos()" class="reserva-precargado-btn">Cambiar</button>
+                </div>
+
+                <div class="form-grupo">
+                    <label>Tu nombre *</label>
+                    <input type="text" name="nombre_cliente" id="input-nombre" required placeholder="Ej: Juan García">
+                </div>
+                <div class="form-grupo">
+                    <label>Tu email *</label>
+                    <input type="email" name="email_cliente" id="input-email" required placeholder="tu@email.com">
+                </div>
+                <div class="form-grupo">
+                    <label>Tu teléfono</label>
+                    <input type="text" name="telefono_cliente" id="input-telefono" placeholder="809-555-1234">
+                </div>
+
+                <!-- Resumen -->
+                <div class="reserva-resumen">
+                    <p class="reserva-resumen-titulo">📋 Resumen de tu reserva</p>
+                    <div class="reserva-resumen-item">
+                        <span class="reserva-resumen-label">Servicio</span>
+                        <span class="reserva-resumen-valor" id="resumen-servicio">—</span>
+                    </div>
+                    <div class="reserva-resumen-item">
+                        <span class="reserva-resumen-label">Fecha y hora</span>
+                        <span class="reserva-resumen-valor" id="resumen-fecha">—</span>
+                    </div>
+                </div>
+
+                <div class="reserva-panel-nav">
+                    <button type="button" class="btn" onclick="irPaso(2)">← Atrás</button>
+                    <button type="submit" class="btn btn-primary">
+                        ✅ Confirmar reserva
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </form>
     {% endif %}
+
 </div>
 
-    {% if plan_actual != 'elite' %}
-    <div class="reserva-marca-agua">
-        Powered by <a href="{{ url_for('index') }}">Reserfy</a>
-    </div>
-    {% endif %}
-    
+{% if negocio.plan == 'starter' %}
+<div class="reserva-marca-agua">
+    Powered by <a href="{{ url_for('index') }}">Reserfy</a>
+</div>
+{% endif %}
+
+<script>
+const PLAN = "{{ negocio.plan }}";
+const SLUG = "{{ negocio.slug }}";
+const SLOTS_URL = "/b/{{ negocio.slug }}/slots";
+</script>
+<script src="{{ url_for('static', filename='js/reserva_publica.js') }}"></script>
+
 {% endblock %}

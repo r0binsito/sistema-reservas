@@ -496,7 +496,7 @@ def google_authorized(blueprint, token):
 def redirigir_post_oauth(response):
     if response.status_code == 302 and '/auth/google' in request.path:
         if current_user.is_authenticated:
-            return redirect(url_for("elegir_plan"))
+            return redirect(url_for("dashboard"))
     return response
 
 # --- Dashboard protegido ---
@@ -861,6 +861,29 @@ def enviar_cancelacion_emails(cliente, negocio, reserva):
         """
     )
     
+@app.route("/b/<slug>/slots")
+def slots_disponibles(slug):
+    from flask import jsonify
+    negocio = Negocio.query.filter_by(slug=slug).first_or_404()
+    fecha_str = request.args.get("fecha")
+    if not fecha_str:
+        return jsonify({"slots": []})
+
+    try:
+        fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        slots = obtener_slots_disponibles(negocio.id, fecha)
+        tz = pytz.timezone(negocio.timezone)
+
+        resultado = []
+        for slot_local, slot_utc in slots:
+            resultado.append({
+                "local": slot_local.strftime("%I:%M %p"),
+                "utc": str(slot_utc)
+            })
+        return jsonify({"slots": resultado})
+    except Exception as e:
+        return jsonify({"slots": [], "error": str(e)})
+
 
 # --- Página pública de reservas ---
 @app.route("/b/<slug>", methods=["GET", "POST"])
@@ -891,11 +914,16 @@ def reserva_publica(slug):
             puede, count = verificar_limite(negocio, "reservas_mes")
             if not puede:
                 mensaje = "Este negocio ha alcanzado su límite de reservas por este mes. Intenta más tarde."
-                return render_template("reserva_publica.html",
-                    negocio=negocio, slots=[], mensaje=mensaje,
-                    fecha_seleccionada=None, servicio_seleccionado=None,
-                    servicios=servicios)
-
+                return render_template(
+                "reserva_publica.html",
+                negocio=negocio,
+                slots=slots,
+                mensaje=mensaje,
+                fecha_seleccionada=fecha_seleccionada,
+                servicio_seleccionado=servicio_seleccionado,
+                servicios=servicios,
+                now=datetime.now()
+            )
             fecha_hora_utc = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
 
             cliente = Cliente.query.filter_by(
@@ -948,14 +976,15 @@ def reserva_publica(slug):
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
     return render_template(
-        "reserva_publica.html",
-        negocio=negocio,
-        slots=slots,
-        mensaje=mensaje,
-        fecha_seleccionada=fecha_seleccionada,
-        servicio_seleccionado=servicio_seleccionado,
-        servicios=servicios
-    )
+    "reserva_publica.html",
+    negocio=negocio,
+    slots=slots,
+    mensaje=mensaje,
+    fecha_seleccionada=fecha_seleccionada,
+    servicio_seleccionado=servicio_seleccionado,
+    servicios=servicios,
+    now=datetime.now()
+)
             
 # --- Ver todas las reservas del negocio ---
 @app.route("/reservas")
