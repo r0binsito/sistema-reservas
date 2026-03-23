@@ -18,6 +18,7 @@ class Negocio(db.Model):
     logo_url = db.Column(db.String(300))
     plan = db.Column(db.String(20), default="trial")
     trial_expira = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc) + timedelta(days=14))
+    marca_agua_personalizada = db.Column(db.String(200), nullable=True)
 
     clientes = db.relationship("Cliente", backref="negocio", lazy=True, cascade="all, delete-orphan")
     reservas = db.relationship("Reserva", backref="negocio", lazy=True, cascade="all, delete-orphan")

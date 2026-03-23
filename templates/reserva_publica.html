@@ -1,41 +1,33 @@
 {% extends "base.html" %}
 
+{% set is_owner = current_user.is_authenticated and current_user.negocio and current_user.negocio.id == negocio.id %}
+{% block body_class %}{% if not is_owner %}sin-navbar{% endif %}{% endblock %}
+
 {% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
 
-{% block navbar %}
-<nav class="navbar">
-    <a href="{{ url_for('index') }}" class="nav-brand">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" class="nav-logo" alt="Reserfy">
-        <span class="nav-brand-text">Reserfy</span>
-    </a>
-    <div class="nav-links">
-        {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('logout') }}">Salir</a>
-        {% else %}
-            <a href="{{ url_for('registro') }}">¿Tienes un negocio? Regístrate gratis</a>
-        {% endif %}
-    </div>
-</nav>
-{% endblock %}
+
+
 
 {% block contenido %}
 
 <div class="reserva-publica-wrap {% if negocio.plan == 'elite' %}reserva-elite{% endif %}">
 
     {% if negocio.plan == 'elite' %}
-    <div class="reserva-elite-bg"></div>
+    <div class="reserva-elite-bg">
+        <div class="reserva-elite-particle-1"></div>
+        <div class="reserva-elite-particle-2"></div>
+        <div class="reserva-elite-particle-3"></div>
+    </div>
     {% endif %}
 
-    <!-- Header del negocio -->
     <div class="reserva-negocio-header">
         <div class="reserva-negocio-logo-wrap">
             {% if negocio.logo_url %}
-                <img src="{{ negocio.logo_url }}" alt="{{ negocio.nombre }}" class="reserva-negocio-logo">
+            <img src="{{ negocio.logo_url }}" alt="{{ negocio.nombre }}" class="reserva-negocio-logo">
             {% else %}
-                <div class="reserva-negocio-logo-placeholder">
-                    <span>📅</span>
-                </div>
+            <div class="reserva-negocio-logo-placeholder">
+                <span>📅</span>
+            </div>
             {% endif %}
         </div>
         <div class="reserva-negocio-info">
@@ -46,24 +38,23 @@
                 {% endif %}
             </div>
             {% if negocio.tipo %}
-                <span class="badge badge-cyan">{{ negocio.tipo }}</span>
+            <span class="badge badge-cyan">{{ negocio.tipo }}</span>
             {% endif %}
             {% if negocio.eslogan %}
-                <p class="reserva-negocio-eslogan">{{ negocio.eslogan }}</p>
+            <p class="reserva-negocio-eslogan">{{ negocio.eslogan }}</p>
             {% endif %}
             <div class="reserva-negocio-contacto">
                 {% if negocio.telefono %}
-                    <span class="reserva-contacto-item">📞 {{ negocio.telefono }}</span>
+                <span class="reserva-contacto-item">📞 {{ negocio.telefono }}</span>
                 {% endif %}
                 {% if negocio.direccion %}
-                    <span class="reserva-contacto-item">📍 {{ negocio.direccion }}</span>
+                <span class="reserva-contacto-item">📍 {{ negocio.direccion }}</span>
                 {% endif %}
             </div>
         </div>
     </div>
 
     {% if mensaje %}
-    <!-- Confirmación -->
     <div class="reserva-confirmacion">
         <div class="reserva-confirmacion-icon">✅</div>
         <h2 class="reserva-confirmacion-titulo">¡Reserva confirmada!</h2>
@@ -76,7 +67,6 @@
 
     {% else %}
 
-    <!-- Pasos -->
     <div class="reserva-steps">
         <div class="reserva-step" id="step-ind-1">
             <div class="reserva-step-circle">1</div>
@@ -96,15 +86,12 @@
 
     <form method="POST" id="form-reserva">
 
-        <!-- Paso 1 — Servicios -->
         <div class="reserva-panel" id="panel-1">
             <div class="card">
                 <h2 class="reserva-panel-titulo">Selecciona un servicio</h2>
                 <div class="reserva-servicios-grid">
                     {% for s in servicios %}
-                    <div class="reserva-servicio-card"
-                        data-nombre="{{ s.nombre }}"
-                        onclick="seleccionarServicio(this)">
+                    <div class="reserva-servicio-card" data-nombre="{{ s.nombre }}" onclick="seleccionarServicio(this)">
                         <div class="reserva-servicio-emoji">✂️</div>
                         <div class="reserva-servicio-nombre">{{ s.nombre }}</div>
                         <div class="reserva-servicio-info">
@@ -124,28 +111,24 @@
                 <input type="hidden" name="servicio" id="servicio-hidden">
                 <div class="reserva-panel-nav">
                     <div></div>
-                    <button type="button" class="btn btn-primary" onclick="irPaso(2)" id="btn-paso-2" disabled>
-                        Siguiente → Elegir fecha
+                    <button type="button" class="btn btn-primary" onclick="irPaso(2)" id="btn-paso-2">
+                        Siguiente 
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Paso 2 — Fecha y hora -->
         <div class="reserva-panel" id="panel-2" style="display:none;">
             <div class="card">
                 <h2 class="reserva-panel-titulo">Elige fecha y hora</h2>
 
                 {% if negocio.plan in ['pro', 'elite'] %}
-                <!-- Calendario visual Pro/Elite -->
                 <div class="reserva-calendario" id="reserva-calendario"></div>
                 <input type="hidden" name="fecha" id="fecha-hidden">
                 {% else %}
-                <!-- Input simple Starter -->
                 <div class="form-grupo">
                     <label>Fecha *</label>
-                    <input type="date" name="fecha" id="fecha-input" required
-                        min="{{ now.strftime('%Y-%m-%d') }}"
+                    <input type="date" name="fecha" id="fecha-input" required min="{{ now.strftime('%Y-%m-%d') }}"
                         onchange="cargarSlots(this.value)">
                 </div>
                 {% endif %}
@@ -158,15 +141,14 @@
                 <input type="hidden" name="hora" id="hora-hidden">
 
                 <div class="reserva-panel-nav">
-                    <button type="button" class="btn" onclick="irPaso(1)">← Atrás</button>
-                    <button type="button" class="btn btn-primary" onclick="irPaso(3)" id="btn-paso-3" disabled>
-                        Siguiente → Tus datos
+                    <button type="button" class="btn" onclick="irPaso(1)">Atrás</button>
+                    <button type="button" class="btn btn-primary" onclick="irPaso(3)" id="btn-paso-3">
+                        Siguiente   
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Paso 3 — Datos del cliente -->
         <div class="reserva-panel" id="panel-3" style="display:none;">
             <div class="card">
                 <h2 class="reserva-panel-titulo">Tus datos</h2>
@@ -189,7 +171,6 @@
                     <input type="text" name="telefono_cliente" id="input-telefono" placeholder="809-555-1234">
                 </div>
 
-                <!-- Resumen -->
                 <div class="reserva-resumen">
                     <p class="reserva-resumen-titulo">📋 Resumen de tu reserva</p>
                     <div class="reserva-resumen-item">
@@ -203,7 +184,7 @@
                 </div>
 
                 <div class="reserva-panel-nav">
-                    <button type="button" class="btn" onclick="irPaso(2)">← Atrás</button>
+                    <button type="button" class="btn" onclick="irPaso(2)">Atrás</button>
                     <button type="submit" class="btn btn-primary">
                         ✅ Confirmar reserva
                     </button>
@@ -223,9 +204,9 @@
 {% endif %}
 
 <script>
-const PLAN = "{{ negocio.plan }}";
-const SLUG = "{{ negocio.slug }}";
-const SLOTS_URL = "/b/{{ negocio.slug }}/slots";
+    const PLAN = "{{ negocio.plan }}";
+    const SLUG = "{{ negocio.slug }}";
+    const SLOTS_URL = "/b/{{ negocio.slug }}/slots";
 </script>
 <script src="{{ url_for('static', filename='js/reserva_publica.js') }}"></script>
 

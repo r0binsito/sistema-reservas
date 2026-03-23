@@ -55,7 +55,7 @@
         <div class="planes-grid planes-grid-3">
 
             <!-- Starter -->
-            <div class="plan-card plan-card-starter">
+            <div class="plan-card plan-card-starter" onclick="seleccionarPlan(this, 'starter')">
                 <div class="plan-card-glow plan-card-glow-starter"></div>
                 <div class="plan-card-inner">
                     <div class="plan-emoji">⚡</div>
@@ -84,14 +84,14 @@
                     <form method="POST">
                         <input type="hidden" name="plan" value="starter">
                         <button type="submit" class="plan-btn plan-btn-starter">
-                            Empezar prueba gratis →
+                            Empezar prueba gratis
                         </button>
                     </form>
                 </div>
             </div>
 
             <!-- Pro -->
-            <div class="plan-card plan-card-pro">
+            <div class="plan-card plan-card-pro" onclick="seleccionarPlan(this, 'pro')">
                 <div class="plan-card-glow plan-card-glow-pro"></div>
                 <div class="plan-popular-badge">🔥 Más Popular</div>
                 <div class="plan-card-inner">
@@ -121,14 +121,14 @@
                     <form method="POST">
                         <input type="hidden" name="plan" value="pro">
                         <button type="submit" class="plan-btn plan-btn-pro">
-                            Empezar prueba gratis →
+                            Empezar prueba gratis 
                         </button>
                     </form>
                 </div>
             </div>
 
             <!-- Elite -->
-            <div class="plan-card plan-card-elite">
+            <div class="plan-card plan-card-elite" onclick="seleccionarPlan(this, 'elite')">
                 <div class="plan-card-glow plan-card-glow-elite"></div>
                 <div class="plan-elite-badge">👑 Elite</div>
                 <div class="plan-elite-stars">
@@ -164,7 +164,7 @@
                     <form method="POST">
                         <input type="hidden" name="plan" value="elite">
                         <button type="submit" class="plan-btn plan-btn-elite">
-                            Empezar prueba gratis →
+                            Empezar prueba gratis 
                         </button>
                     </form>
                 </div>

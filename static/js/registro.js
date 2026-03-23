@@ -217,3 +217,43 @@ function cancelarCropper() {
         cropperInstance = null;
     }
 }
+
+// ===== GUARDAR ESTADO ONBOARDING =====
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form[method="POST"]');
+    const path = window.location.pathname;
+
+    if (path === '/configurar-negocio') {
+        const campos = ['nombre', 'eslogan', 'telefono', 'direccion'];
+        campos.forEach(campo => {
+            const input = document.querySelector(`[name="${campo}"]`);
+            if (input) {
+                input.addEventListener('input', () => {
+                    const datos = {};
+                    campos.forEach(c => {
+                        const el = document.querySelector(`[name="${c}"]`);
+                        if (el) datos[c] = el.value;
+                    });
+                    const tipo = document.querySelector('select[name="tipo"]');
+                    if (tipo) datos.tipo = tipo.value;
+                    localStorage.setItem('onboarding_negocio', JSON.stringify(datos));
+                });
+            }
+        });
+
+        const tipo = document.querySelector('select[name="tipo"]');
+        if (tipo) {
+            tipo.addEventListener('change', () => {
+                const datos = JSON.parse(localStorage.getItem('onboarding_negocio') || '{}');
+                datos.tipo = tipo.value;
+                localStorage.setItem('onboarding_negocio', JSON.stringify(datos));
+            });
+        }
+    }
+
+    // Limpiar localStorage al completar el onboarding
+    if (path === '/dashboard') {
+        localStorage.removeItem('onboarding_registro');
+        localStorage.removeItem('onboarding_negocio');
+    }
+});

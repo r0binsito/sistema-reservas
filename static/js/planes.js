@@ -69,3 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
         labelMensual.style.color = '#FA8F3E';
     }
 });
+
+function seleccionarPlan(card, plan) {
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('plan-seleccionado'));
+    card.classList.add('plan-seleccionado');
+}

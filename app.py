@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
 from datetime import datetime, time, date, timedelta
+from datetime import datetime, timedelta, timezone
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
 from flask_dance.contrib.google import make_google_blueprint, google
@@ -84,7 +85,7 @@ login_manager.login_view = "login"
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Usuario.query.get(int(user_id))
+    return db.session.get(Usuario, int(user_id))
 
 @app.context_processor
 def inject_plan_info():
@@ -94,8 +95,9 @@ def inject_plan_info():
         limites = get_limites(negocio)
         
         # Calcular uso actual
-        from datetime import datetime
-        inicio_mes = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0)
+        from datetime import timezone
+        inicio_mes = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, tzinfo=None)
+        
         uso = {
             "reservas_mes": Reserva.query.filter(
                 Reserva.negocio_id == negocio.id,
@@ -109,7 +111,7 @@ def inject_plan_info():
         trial_expirado = False
         dias_restantes = None
         if plan == "trial" and negocio.trial_expira:
-            delta = negocio.trial_expira - datetime.utcnow()
+            delta = negocio.trial_expira - datetime.now(timezone.utc).replace(tzinfo=None)
             if delta.days < 0:
                 trial_expirado = True
             else:
@@ -234,7 +236,7 @@ def get_limites(negocio):
     # Verificar si el trial expiró
     if plan == "trial" and negocio.trial_expira:
         from datetime import datetime
-        if datetime.utcnow() > negocio.trial_expira:
+        if datetime.now(timezone.utc).replace(tzinfo=None) > negocio.trial_expira:
             return None  # Trial expirado — bloquear
     return LIMITES_PLAN.get(plan, LIMITES_PLAN["starter"])
 
@@ -268,21 +270,21 @@ def verificar_limite(negocio, tipo):
 def index():
     return render_template("index.html")
 
-# --- Registro ---
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
+    if current_user.is_authenticated:
+        # Solo redirigir si NO viene del onboarding
+        if not request.args.get('onboarding'):
+            return redirect(url_for('dashboard'))
     if request.method == "POST":
+        # ... resto igual
         email = request.form["email"]
         password = request.form["password"]
 
         if Usuario.query.filter_by(email=email).first():
             return render_template("registro.html", error="Ya existe una cuenta con ese email.", paso=1)
 
-        # Crear negocio vacío temporalmente
-        negocio = Negocio(
-            nombre="Mi negocio",
-            email=email
-        )
+        negocio = Negocio(nombre="Mi negocio", email=email)
         negocio.slug = generar_slug(email.split("@")[0])
         db.session.add(negocio)
         db.session.commit()
@@ -298,7 +300,20 @@ def registro():
         login_user(usuario)
         return redirect(url_for("elegir_plan"))
 
-    return render_template("registro.html", paso=1)
+    return render_template("registro.html", paso=1,
+    plan_elegido=current_user.negocio.plan if current_user.is_authenticated and current_user.negocio.plan not in ['trial', None] else None)
+
+@app.route("/elegir-plan", methods=["GET", "POST"])
+@login_required
+def elegir_plan():
+    if request.method == "POST":
+        plan = request.form.get("plan")
+        if plan in ["starter", "pro", "elite"]:
+            current_user.negocio.plan = plan
+            db.session.commit()
+        return redirect(url_for("configurar_negocio"))
+    return render_template("elegir_plan.html", paso=2)
+    
 
 # --- Login ---
 @app.route("/login", methods=["GET", "POST"])
@@ -439,18 +454,10 @@ def configurar_negocio():
         db.session.commit()
         return redirect(url_for("dashboard"))
 
-    return render_template("configurar_negocio.html", negocio=negocio, paso=3)
-
-@app.route("/elegir-plan", methods=["GET", "POST"])
-@login_required
-def elegir_plan():
-    if request.method == "POST":
-        plan = request.form.get("plan")
-        if plan in ["starter", "pro", "elite"]:
-            current_user.negocio.plan = plan
-            db.session.commit()
-        return redirect(url_for("configurar_negocio"))
-    return render_template("elegir_plan.html", paso=2)
+    return render_template("configurar_negocio.html", 
+    paso=3, 
+    negocio=current_user.negocio,
+    plan_elegido=current_user.negocio.plan)
 
 from flask_dance.consumer import oauth_error
 
@@ -659,6 +666,8 @@ def eliminar_servicio(servicio_id):
 @app.route("/horario/configurar", methods=["GET", "POST"])
 @login_required
 def configurar_horario():
+    if not current_user.is_authenticated:
+        return redirect(url_for('registro'))
     if request.method == "POST":
         # Borra el horario anterior del negocio
         Horario.query.filter_by(negocio_id=current_user.negocio_id).delete()
@@ -683,7 +692,7 @@ def configurar_horario():
     return render_template("horario.html", dias=enumerate(dias))
 
 def obtener_slots_disponibles(negocio_id, fecha):
-    negocio = Negocio.query.get(negocio_id)
+    negocio = db.session.get(Negocio, negocio_id)
     tz = pytz.timezone(negocio.timezone)
 
     dia_semana = fecha.weekday()

@@ -160,3 +160,12 @@ function mostrarModalUpgrade(titulo, desc) {
     if (desc) document.getElementById('modal-limite-desc').textContent = desc;
     modal.style.display = 'flex';
 }
+
+// Onboarding navigation
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.onboarding-mini-step[data-href]').forEach(function(step) {
+        step.addEventListener('click', function() {
+            window.location.href = this.dataset.href;
+        });
+    });
+});
