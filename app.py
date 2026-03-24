@@ -235,8 +235,12 @@ def get_limites(negocio):
     plan = negocio.plan or "trial"
     # Verificar si el trial expiró
     if plan == "trial" and negocio.trial_expira:
-        from datetime import datetime
-        if datetime.now(timezone.utc).replace(tzinfo=None) > negocio.trial_expira:
+        from datetime import datetime, timezone
+        # Normalizamos ambas fechas a "naive" (sin tzinfo) para que sean comparables
+        ahora = datetime.now(timezone.utc).replace(tzinfo=None)
+        expiracion = negocio.trial_expira.replace(tzinfo=None)
+        
+        if ahora > expiracion:
             return None  # Trial expirado — bloquear
     return LIMITES_PLAN.get(plan, LIMITES_PLAN["starter"])
 
