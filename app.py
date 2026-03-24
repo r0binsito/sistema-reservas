@@ -111,7 +111,7 @@ def inject_plan_info():
         trial_expirado = False
         dias_restantes = None
         if plan == "trial" and negocio.trial_expira:
-            delta = negocio.trial_expira - datetime.now(timezone.utc).replace(tzinfo=None)
+            delta = negocio.trial_expira.replace(tzinfo=None) - datetime.now(timezone.utc).replace(tzinfo=None)
             if delta.days < 0:
                 trial_expirado = True
             else:
