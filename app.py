@@ -1029,15 +1029,22 @@ with app.app_context():
     db.create_all()
     with db.engine.connect() as conn:
         try:
-            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN plan VARCHAR(20) DEFAULT 'trial'"))
+            conn.execute(db.text("""
+                ALTER TABLE negocio 
+                ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'trial'
+            """))
             conn.commit()
-        except:
-            pass
+        except Exception as e:
+            print(e)
+
         try:
-            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN trial_expira DATETIME"))
+            conn.execute(db.text("""
+                ALTER TABLE negocio 
+                ADD COLUMN IF NOT EXISTS trial_expira TIMESTAMP
+            """))
             conn.commit()
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
 # --- Gestionar reserva como cliente (sin login) ---
 @app.route("/reserva/<token>/gestionar", methods=["GET", "POST"])
