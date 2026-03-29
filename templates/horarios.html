@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block titulo %}Configurar Horarios - Reserfy{% endblock %}
+
+{% block contenido %}
+<div class="horarios-container">
+    <div class="horarios-header">
+        <h1>Configura tu horario semanal</h1>
+        <p>Activa los días que trabajas y define tus horas de apertura y cierre.</p>
+    </div>
+
+    <form id="horarios-form">
+        <div class="horarios-grid">
+            {% for dia_index, dia_nombre in [(0, 'Lunes'), (1, 'Martes'), (2, 'Miércoles'), (3, 'Jueves'), (4, 'Viernes'), (5, 'Sábado'), (6, 'Domingo')] %}
+            {% set horario_dia = horarios_por_dia.get(dia_index) if horarios_por_dia else None %}
+            <div class="horario-card{% if horario_dia %} activo{% else %} inactivo{% endif %}" data-dia="{{ dia_index }}">
+                <div class="horario-card-header">
+                    <span class="horario-dia-nombre">{{ dia_nombre }}</span>
+                    <label class="horario-switch">
+                        <input type="checkbox" name="activo_{{ dia_index }}"{% if horario_dia %} checked{% endif %}>
+                        <span class="horario-switch-slider"></span>
+                    </label>
+                </div>
+                <div class="horario-times" {% if not horario_dia %}style="opacity: 0.4; pointer-events: none;"{% endif %}>
+                    <div class="horario-time-group">
+                        <label class="horario-time-label" for="apertura_{{ dia_index }}">Apertura</label>
+                        <input type="time"
+                               id="apertura_{{ dia_index }}"
+                               name="apertura_{{ dia_index }}"
+                               class="horario-time-input"
+                               value="{% if horario_dia %}{{ horario_dia.hora_apertura.strftime('%H:%M') }}{% endif %}">
+                    </div>
+                    <div class="horario-time-group">
+                        <label class="horario-time-label" for="cierre_{{ dia_index }}">Cierre</label>
+                        <input type="time"
+                               id="cierre_{{ dia_index }}"
+                               name="cierre_{{ dia_index }}"
+                               class="horario-time-input"
+                               value="{% if horario_dia %}{{ horario_dia.hora_cierre.strftime('%H:%M') }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="horarios-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar horarios</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/horarios.js') }}"></script>
+{% endblock %}

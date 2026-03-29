@@ -1,29 +1,26 @@
-from flask import Flask, request, redirect, url_for, render_template, session
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.middleware.proxy_fix import ProxyFix
-from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
-from datetime import datetime, time, date, timedelta
-from datetime import datetime, timedelta, timezone
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail as SGMail
-from flask_dance.contrib.google import make_google_blueprint, google
-from flask_dance.consumer import oauth_authorized
-from dotenv import load_dotenv
 import os
 import re
-import pytz
-import cloudinary
-import cloudinary.uploader
-from flask import g
-from flask_dance.consumer import oauth_authorized
-from flask_dance.contrib.google import google
 import secrets
 import ssl
 import certifi
-ssl_context = ssl.create_default_context(cafile=certifi.where())
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
+from datetime import datetime, time, date, timedelta, timezone
+from apscheduler.schedulers.background import BackgroundScheduler
+
+import pytz
+import cloudinary
+import cloudinary.uploader
+from dotenv import load_dotenv
+from sqlalchemy import func, desc
+from flask import Flask, request, redirect, url_for, render_template, session, flash, g, jsonify
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized, oauth_error
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SGMail
+
+from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
 
 load_dotenv()
 
@@ -93,11 +90,11 @@ def inject_plan_info():
         negocio = current_user.negocio
         plan = negocio.plan or "trial"
         limites = get_limites(negocio)
-        
+
         # Calcular uso actual
         from datetime import timezone
         inicio_mes = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, tzinfo=None)
-        
+
         uso = {
             "reservas_mes": Reserva.query.filter(
                 Reserva.negocio_id == negocio.id,
@@ -107,7 +104,7 @@ def inject_plan_info():
             "clientes": Cliente.query.filter_by(negocio_id=negocio.id).count(),
             "servicios": Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count(),
         }
-        
+
         trial_expirado = False
         dias_restantes = None
         if plan == "trial" and negocio.trial_expira:
@@ -131,6 +128,148 @@ def inject_plan_info():
         trial_expirado=False,
         dias_restantes=None
     )
+
+
+def get_dashboard_stats(negocio_id):
+    """Obtiene estadísticas avanzadas para el dashboard según el plan."""
+    # Obtener el negocio para usar su timezone
+    negocio = db.session.get(Negocio, negocio_id)
+    tz_negocio = pytz.timezone(negocio.timezone) if negocio else pytz.utc
+
+    # Fecha/hora actual en timezone del negocio
+    now_utc = datetime.now(timezone.utc)
+    now_local = now_utc.astimezone(tz_negocio).replace(tzinfo=None)
+
+    # Inicio del mes actual (en timezone del negocio, convertido a UTC para comparar)
+    inicio_mes_local = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes_utc = tz_negocio.localize(inicio_mes_local).astimezone(pytz.utc).replace(tzinfo=None)
+
+    # Inicio del mes anterior
+    if now_local.month == 1:
+        inicio_mes_anterior_local = now_local.replace(year=now_local.year - 1, month=12, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        inicio_mes_anterior_local = now_local.replace(month=now_local.month - 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes_anterior_utc = tz_negocio.localize(inicio_mes_anterior_local).astimezone(pytz.utc).replace(tzinfo=None)
+
+    stats = {}
+
+    # === PRÓXIMA CITA DEL DÍA ===
+    # Calcular inicio y fin del día actual en timezone del negocio, luego convertir a UTC
+    hoy_inicio_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy_fin_local = hoy_inicio_local + timedelta(days=1)
+
+    # Convertir a UTC para comparar con la base de datos
+    hoy_inicio_utc = tz_negocio.localize(hoy_inicio_local).astimezone(pytz.utc).replace(tzinfo=None)
+    hoy_fin_utc = tz_negocio.localize(hoy_fin_local).astimezone(pytz.utc).replace(tzinfo=None)
+    now_utc_naive = now_utc.replace(tzinfo=None)
+
+    proxima_reserva = Reserva.query.filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= now_utc_naive,
+        Reserva.fecha_hora < hoy_fin_utc,
+        Reserva.estado != "cancelada"
+    ).order_by(Reserva.fecha_hora).first()
+
+    if proxima_reserva:
+        cliente = db.session.get(Cliente, proxima_reserva.cliente_id)
+        # Convertir hora a timezone local para mostrar
+        hora_local = pytz.utc.localize(proxima_reserva.fecha_hora).astimezone(tz_negocio)
+        stats['proxima_cita'] = {
+            'cliente': cliente.nombre if cliente else 'Cliente',
+            'hora': hora_local.strftime('%I:%M %p'),
+            'servicio': proxima_reserva.servicio
+        }
+    else:
+        stats['proxima_cita'] = None
+
+    # === TASA DE ASISTENCIA (Pro/Elite) ===
+    total_reservas = Reserva.query.filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= inicio_mes_utc,
+        Reserva.estado != "cancelada"
+    ).count()
+
+    completadas = Reserva.query.filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= inicio_mes_utc,
+        Reserva.estado == "completada"
+    ).count()
+
+    if total_reservas > 0:
+        stats['tasa_asistencia'] = round((completadas / total_reservas) * 100)
+    else:
+        stats['tasa_asistencia'] = 100  # Sin reservas = 100%
+
+    # === TOP SERVICIOS (Pro/Elite) ===
+    top_servicios = db.session.query(
+        Reserva.servicio,
+        func.count(Reserva.id).label('total')
+    ).filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.estado != "cancelada",
+        Reserva.fecha_hora >= inicio_mes_utc
+    ).group_by(Reserva.servicio).order_by(desc('total')).limit(3).all()
+
+    stats['top_servicios'] = [{'nombre': s[0], 'cantidad': s[1]} for s in top_servicios] if top_servicios else []
+
+    # === CRECIMIENTO DE CLIENTES (Pro/Elite) ===
+    clientes_mes_actual = db.session.query(Cliente).filter(
+        Cliente.negocio_id == negocio_id
+    ).count()
+
+    # Clientes del mes anterior (aproximación)
+    clientes_mes_anterior_query = db.session.query(func.count(Reserva.cliente_id.distinct())).filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= inicio_mes_anterior_utc,
+        Reserva.fecha_hora < inicio_mes_utc
+    )
+    clientes_mes_anterior = max(0, clientes_mes_actual - clientes_mes_anterior_query.scalar())
+
+    if clientes_mes_anterior > 0:
+        stats['crecimiento_clientes'] = round(((clientes_mes_actual - clientes_mes_anterior) / clientes_mes_anterior) * 100)
+    else:
+        stats['crecimiento_clientes'] = 0
+
+    # === INGRESOS DEL MES (Elite) ===
+    reservas_con_precio = db.session.query(
+        Reserva.servicio,
+        func.count(Reserva.id).label('cantidad')
+    ).filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.estado != "cancelada",
+        Reserva.fecha_hora >= inicio_mes_utc
+    ).group_by(Reserva.servicio).all()
+
+    servicios_precios = {s.nombre: s.precio for s in Servicio.query.filter_by(negocio_id=negocio_id, activo=True).all()}
+
+    ingresos = 0
+    for reserva in reservas_con_precio:
+        precio = servicios_precios.get(reserva.servicio, 0) or 0
+        ingresos += precio * reserva.cantidad
+
+    stats['ingresos_mes'] = ingresos
+
+    # === TICKET PROMEDIO (Elite) ===
+    total_reservas_mes = Reserva.query.filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.estado != "cancelada",
+        Reserva.fecha_hora >= inicio_mes_utc
+    ).count()
+
+    if total_reservas_mes > 0 and ingresos > 0:
+        stats['ticket_promedio'] = round(ingresos / total_reservas_mes)
+    else:
+        stats['ticket_promedio'] = 0
+
+    # === CITAS HOY ===
+    stats['citas_hoy'] = Reserva.query.filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= hoy_inicio_utc,
+        Reserva.fecha_hora < hoy_fin_utc,
+        Reserva.estado != "cancelada"
+    ).count()
+
+    return stats
 
 def generar_slug(nombre):
     slug = nombre.lower()
@@ -160,44 +299,7 @@ def hora_local(negocio, fecha_hora_utc):
         fecha_hora_utc = pytz.utc.localize(fecha_hora_utc)
     return fecha_hora_utc.astimezone(tz)
 
-PLANTILLAS_SERVICIOS = {
-    "Barbería": [
-        {"nombre": "Corte de cabello", "duracion_min": 30, "precio": 350},
-        {"nombre": "Barba", "duracion_min": 20, "precio": 200},
-        {"nombre": "Corte + Barba", "duracion_min": 45, "precio": 500},
-    ],
-    "Salón de belleza": [
-        {"nombre": "Corte de dama", "duracion_min": 45, "precio": 500},
-        {"nombre": "Tinte", "duracion_min": 90, "precio": 1500},
-        {"nombre": "Manicure", "duracion_min": 30, "precio": 300},
-        {"nombre": "Pedicure", "duracion_min": 45, "precio": 400},
-    ],
-    "Consultorio médico": [
-        {"nombre": "Consulta general", "duracion_min": 30, "precio": 800},
-        {"nombre": "Consulta de seguimiento", "duracion_min": 20, "precio": 500},
-    ],
-    "Consultorio dental": [
-        {"nombre": "Limpieza dental", "duracion_min": 45, "precio": 1000},
-        {"nombre": "Extracción", "duracion_min": 30, "precio": 800},
-        {"nombre": "Consulta", "duracion_min": 20, "precio": 500},
-    ],
-    "Spa": [
-        {"nombre": "Masaje relajante", "duracion_min": 60, "precio": 1500},
-        {"nombre": "Facial", "duracion_min": 45, "precio": 1200},
-        {"nombre": "Masaje deportivo", "duracion_min": 60, "precio": 1800},
-    ],
-    "Restaurante": [
-        {"nombre": "Reserva de mesa", "duracion_min": 120, "precio": 0},
-        {"nombre": "Reserva privada", "duracion_min": 180, "precio": 0},
-    ],
-    "Gimnasio": [
-        {"nombre": "Clase grupal", "duracion_min": 60, "precio": 300},
-        {"nombre": "Entrenamiento personal", "duracion_min": 60, "precio": 800},
-    ],
-    "Otro": [
-        {"nombre": "Servicio personalizado", "duracion_min": 60, "precio": 0},
-    ],
-}
+
 
 # ===== LÍMITES POR PLAN =====
 LIMITES_PLAN = {
@@ -420,25 +522,14 @@ def configurar_negocio():
         negocio.nombre = request.form.get("nombre", "Mi negocio")
         negocio.tipo = request.form.get("tipo")
         tipo_personalizado = request.form.get("tipo_personalizado")
+        
         if negocio.tipo == "Otro" and tipo_personalizado:
             negocio.tipo = tipo_personalizado
+            
         negocio.eslogan = request.form.get("eslogan")
         negocio.telefono = request.form.get("telefono")
         negocio.direccion = request.form.get("direccion")
         negocio.slug = generar_slug(negocio.nombre)
-
-        # Precargar servicios según tipo
-        if negocio.tipo and negocio.tipo in PLANTILLAS_SERVICIOS:
-            servicios_existentes = Servicio.query.filter_by(negocio_id=negocio.id).count()
-            if servicios_existentes == 0:
-                for s in PLANTILLAS_SERVICIOS[negocio.tipo]:
-                    servicio = Servicio(
-                        nombre=s["nombre"],
-                        duracion_min=s["duracion_min"],
-                        precio=s["precio"],
-                        negocio_id=negocio.id
-                    )
-                    db.session.add(servicio)
 
         # Logo
         logo_recortado = request.form.get("logo_recortado")
@@ -459,15 +550,15 @@ def configurar_negocio():
         return redirect(url_for("dashboard"))
 
     return render_template("configurar_negocio.html", 
-    paso=3, 
-    negocio=current_user.negocio,
-    plan_elegido=current_user.negocio.plan)
+                           paso=3, 
+                           negocio=current_user.negocio,
+                           plan_elegido=current_user.negocio.plan)
 
-from flask_dance.consumer import oauth_error
 
 @oauth_error.connect_via(google_bp)
 def google_error(blueprint, message, response):
-    pass  # Ignorar errores OAuth
+    return redirect(url_for("login"))
+
 
 @oauth_authorized.connect_via(google_bp)
 def google_authorized(blueprint, token):
@@ -480,14 +571,17 @@ def google_authorized(blueprint, token):
 
     info = resp.json()
     email = info["email"]
-    nombre = info.get("name", email.split("@")[0])
 
     usuario = Usuario.query.filter_by(email=email).first()
+
     if usuario:
         login_user(usuario)
-        return False
+        return redirect(url_for("dashboard"))
 
-    negocio = Negocio(nombre="Mi negocio", email=email)
+    negocio = Negocio(
+        nombre=f"Negocio de {info.get('given_name', email.split('@')[0])}", 
+        email=email
+    )
     negocio.slug = generar_slug(email.split("@")[0])
     db.session.add(negocio)
     db.session.commit()
@@ -501,20 +595,31 @@ def google_authorized(blueprint, token):
     db.session.commit()
 
     login_user(usuario)
-    return False
-
-@app.after_request
-def redirigir_post_oauth(response):
-    if response.status_code == 302 and '/auth/google' in request.path:
-        if current_user.is_authenticated:
-            return redirect(url_for("dashboard"))
-    return response
+    
+    return redirect(url_for("elegir_plan"))
 
 # --- Dashboard protegido ---
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    negocio = current_user.negocio
+
+    # Verificar si el onboarding acaba de completarse
+    onboarding_just_completed = session.pop('onboarding_just_completed', False)
+
+    # Verificar si faltan configuraciones básicas (para el modal de onboarding)
+    faltan_horarios = Horario.query.filter_by(negocio_id=negocio.id).count() == 0
+    faltan_servicios = Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count() == 0
+
+    # Obtener estadísticas avanzadas según el plan
+    stats = get_dashboard_stats(negocio.id)
+
+    return render_template("dashboard.html",
+        onboarding_just_completed=onboarding_just_completed,
+        faltan_horarios=faltan_horarios,
+        faltan_servicios=faltan_servicios,
+        stats=stats,
+        plan=negocio.plan or "trial")
 
 # --- Ver clientes SOLO del negocio actual ---
 @app.route("/clientes")
@@ -531,7 +636,36 @@ def ver_clientes():
     for c in clientes:
         resultado += f"ID: {c.id} — {c.nombre} — {c.telefono}<br>"
     return render_template("clientes.html", clientes=clientes)
-    
+
+
+
+@app.route("/api/clientes/buscar", methods=["GET"])
+@login_required
+def api_buscar_clientes():
+    query = request.args.get("q", "").strip()
+
+    # Si no hay texto, mandamos lista vacía para que el JS restaure la original
+    if not query:
+        return jsonify({"clientes": []})
+
+    # Consulta directa a la base de datos (ilike es clave para iniciales)
+    clientes = Cliente.query.filter(
+        Cliente.negocio_id == current_user.negocio_id,
+        db.or_(
+            Cliente.nombre.ilike(f"%{query}%"),
+            Cliente.telefono.ilike(f"%{query}%"),
+            Cliente.email.ilike(f"%{query}%")
+        )
+    ).limit(15).all()
+
+    return jsonify({
+        "clientes": [{
+            "id": c.id,
+            "nombre": c.nombre,
+            "telefono": c.telefono or "",
+            "email": c.email or ""
+        } for c in clientes]
+    })
 
 @app.route("/clientes/nuevo", methods=["GET", "POST"])
 @login_required
@@ -548,14 +682,14 @@ def nuevo_cliente():
     if request.method == "POST":
         cliente = Cliente(
             nombre=request.form["nombre"],
-            telefono=request.form["telefono"],
+            email=request.form.get("email"),
+            telefono=request.form.get("telefono"),
             negocio_id=current_user.negocio_id
         )
         db.session.add(cliente)
         db.session.commit()
         return redirect(url_for("ver_clientes"))
     return render_template("nuevo_cliente.html")
-
 
 @app.route("/servicios/nuevo", methods=["GET", "POST"])
 @login_required
@@ -578,6 +712,14 @@ def nuevo_servicio():
         )
         db.session.add(servicio)
         db.session.commit()
+
+        # Verificar si onboarding completado (horario + al menos un servicio activo)
+        tiene_horarios = Horario.query.filter_by(negocio_id=current_user.negocio_id).count() > 0
+        tiene_servicios = Servicio.query.filter_by(negocio_id=current_user.negocio_id, activo=True).count() > 0
+
+        if tiene_horarios and tiene_servicios:
+            session['onboarding_just_completed'] = True
+
         return redirect(url_for("ver_servicios"))
     return render_template("nuevo_servicio.html")
 
@@ -592,7 +734,7 @@ def upgrade():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("login"))
+    return redirect(url_for("index"))
 
 # --- Perfil del negocio ---
 @app.route("/perfil", methods=["GET", "POST"])
@@ -627,7 +769,102 @@ def perfil_negocio():
         return redirect(url_for("dashboard"))
     return render_template("perfil.html", negocio=negocio)
 
-# --- Ver y gestionar servicios ---
+# --- API Routes for Services (AJAX) ---
+@app.route("/api/servicios/<int:id>", methods=["GET"])
+@login_required
+def api_get_servicio(id):
+    servicio = Servicio.query.filter_by(
+        id=id,
+        negocio_id=current_user.negocio_id
+    ).first_or_404()
+    return jsonify({
+        "id": servicio.id,
+        "nombre": servicio.nombre,
+        "duracion_min": servicio.duracion_min,
+        "precio": servicio.precio
+    })
+
+@app.route("/api/servicios", methods=["POST"])
+@app.route("/servicio/nuevo", methods=["POST"])
+@app.route("/api/servicios/nuevo", methods=["POST"])
+@login_required
+def api_nuevo_servicio():
+    """Create a new service via AJAX."""
+    try:
+        data = request.get_json()
+
+        negocio = current_user.negocio
+        puede, count = verificar_limite(negocio, "servicios")
+
+        if not puede:
+            if count == "trial_expirado":
+                return jsonify({"success": False, "error": "trial_expirado", "redirect": url_for('upgrade')})
+            return jsonify({
+                "success": False,
+                "error": f"Alcanzaste el límite de servicios de tu plan ({LIMITES_PLAN[negocio.plan]['servicios']})."
+            })
+
+        servicio = Servicio(
+            nombre=data.get('nombre', ''),
+            duracion_min=int(data.get('duracion_min', 60)),
+            precio=float(data.get('precio')) if data.get('precio') else None,
+            negocio_id=current_user.negocio_id
+        )
+        db.session.add(servicio)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Servicio creado correctamente", "id": servicio.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/servicios/<int:servicio_id>", methods=["PUT", "POST"])
+@app.route("/api/servicios/<int:servicio_id>/editar", methods=["POST"])
+@login_required
+def api_editar_servicio(servicio_id):
+    """Edit a service via AJAX."""
+    try:
+        servicio = Servicio.query.filter_by(
+            id=servicio_id,
+            negocio_id=current_user.negocio_id
+        ).first_or_404()
+
+        data = request.get_json()
+
+        servicio.nombre = data.get('nombre', servicio.nombre)
+        servicio.duracion_min = int(data.get('duracion_min', servicio.duracion_min))
+        servicio.precio = float(data.get('precio')) if data.get('precio') else None
+
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Servicio actualizado correctamente"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/servicios/<int:servicio_id>", methods=["DELETE"])
+@app.route("/api/servicios/<int:servicio_id>/eliminar", methods=["POST"])
+@login_required
+def api_eliminar_servicio(servicio_id):
+    """Delete a service via AJAX."""
+    try:
+        servicio = Servicio.query.filter_by(
+            id=servicio_id,
+            negocio_id=current_user.negocio_id
+        ).first_or_404()
+
+        db.session.delete(servicio)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Servicio eliminado correctamente"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
+
+
+# --- Ver y gestionar servicios (página) ---
 @app.route("/servicios")
 @login_required
 def ver_servicios():
@@ -666,34 +903,94 @@ def eliminar_servicio(servicio_id):
     db.session.commit()
     return redirect(url_for("ver_servicios"))
 
+# --- API Horarios (nuevo diseño) ---
+@app.route("/api/horarios", methods=["POST"])
+@login_required
+def api_horarios():
+    """API para guardar horarios mediante JSON."""
+    try:
+        data = request.get_json()
+        horarios = data.get('horarios', [])
+
+        if not horarios:
+            return jsonify({"success": False, "error": "No se recibieron datos de horarios"}), 400
+
+        # Eliminar horarios existentes del negocio
+        Horario.query.filter_by(negocio_id=current_user.negocio_id).delete()
+
+        # Guardar nuevos horarios
+        for h in horarios:
+            if h.get('activo') and h.get('hora_inicio') and h.get('hora_fin'):
+                try:
+                    hora_inicio = datetime.strptime(h['hora_inicio'], "%H:%M").time()
+                    hora_fin = datetime.strptime(h['hora_fin'], "%H:%M").time()
+
+                    horario = Horario(
+                        negocio_id=current_user.negocio_id,
+                        dia_semana=h['dia_semana'],
+                        hora_apertura=hora_inicio,
+                        hora_cierre=hora_fin
+                    )
+                    db.session.add(horario)
+                except (ValueError, KeyError) as e:
+                    db.session.rollback()
+                    return jsonify({"success": False, "error": f"Error en formato de hora: {str(e)}"}), 400
+
+        db.session.commit()
+
+        # Verificar onboarding
+        tiene_horarios = Horario.query.filter_by(negocio_id=current_user.negocio_id).count() > 0
+        tiene_servicios = Servicio.query.filter_by(negocio_id=current_user.negocio_id, activo=True).count() > 0
+
+        if tiene_horarios and tiene_servicios:
+            session['onboarding_just_completed'] = True
+
+        return jsonify({"success": True, "message": "Horarios guardados correctamente"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # --- Configurar horario del negocio ---
 @app.route("/horario/configurar", methods=["GET", "POST"])
 @login_required
 def configurar_horario():
     if not current_user.is_authenticated:
         return redirect(url_for('registro'))
-    if request.method == "POST":
-        # Borra el horario anterior del negocio
-        Horario.query.filter_by(negocio_id=current_user.negocio_id).delete()
 
-        dias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
-        for i, dia in enumerate(dias):
-            if request.form.get(f"activo_{i}"):
-                apertura = datetime.strptime(request.form[f"apertura_{i}"], "%H:%M").time()
-                cierre = datetime.strptime(request.form[f"cierre_{i}"], "%H:%M").time()
-                horario = Horario(
-                    negocio_id=current_user.negocio_id,
-                    dia_semana=i,
-                    hora_apertura=apertura,
-                    hora_cierre=cierre
-                )
-                db.session.add(horario)
+    # GET: Mostrar el nuevo template con horarios existentes
+    if request.method == "GET":
+        horarios_existentes = Horario.query.filter_by(negocio_id=current_user.negocio_id).all()
+        horarios_por_dia = {h.dia_semana: h for h in horarios_existentes}
+        return render_template("horarios.html", horarios_por_dia=horarios_por_dia)
 
-        db.session.commit()
-        return redirect(url_for("dashboard"))
+    # POST: Mantener compatibilidad con el formulario legacy
+    Horario.query.filter_by(negocio_id=current_user.negocio_id).delete()
 
-    dias = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
-    return render_template("horario.html", dias=enumerate(dias))
+    dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    for i, dia in enumerate(dias):
+        if request.form.get(f"activo_{i}"):
+            apertura = datetime.strptime(request.form[f"apertura_{i}"], "%H:%M").time()
+            cierre = datetime.strptime(request.form[f"cierre_{i}"], "%H:%M").time()
+            horario = Horario(
+                negocio_id=current_user.negocio_id,
+                dia_semana=i,
+                hora_apertura=apertura,
+                hora_cierre=cierre
+            )
+            db.session.add(horario)
+
+    db.session.commit()
+
+    # Verificar onboarding
+    tiene_horarios = Horario.query.filter_by(negocio_id=current_user.negocio_id).count() > 0
+    tiene_servicios = Servicio.query.filter_by(negocio_id=current_user.negocio_id, activo=True).count() > 0
+
+    if tiene_horarios and tiene_servicios:
+        session['onboarding_just_completed'] = True
+
+    return redirect(url_for("dashboard"))
 
 def obtener_slots_disponibles(negocio_id, fecha):
     negocio = db.session.get(Negocio, negocio_id)
@@ -999,15 +1296,47 @@ def reserva_publica(slug):
     now=datetime.now()
 )
             
-# --- Ver todas las reservas del negocio ---
+# Auto-cancelar reservas después de 4 horas
+def auto_cancelar_reservas():
+    with app.app_context():
+        limite = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4)
+        reservas = Reserva.query.filter(
+            Reserva.estado == 'pendiente',
+            Reserva.fecha_hora < limite
+        ).all()
+        for r in reservas:
+            r.estado = 'cancelada'
+        if reservas:
+            db.session.commit()
+            print(f"Auto-canceladas {len(reservas)} reservas")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(auto_cancelar_reservas, 'interval', minutes=30)
+scheduler.start()
+
+# Ver reservas pendientes
 @app.route("/reservas")
 @login_required
 def ver_reservas():
     reservas = Reserva.query.filter_by(
         negocio_id=current_user.negocio_id
+    ).filter(
+        Reserva.estado == 'pendiente'
     ).order_by(Reserva.fecha_hora).all()
     return render_template("reservas.html", reservas=reservas)
 
+# Historial
+@app.route("/reservas/historial")
+@login_required
+def historial_reservas():
+    reservas = Reserva.query.filter_by(
+        negocio_id=current_user.negocio_id
+    ).filter(
+        Reserva.estado.in_(['cancelada', 'completada'])
+    ).order_by(Reserva.fecha_hora.desc()).all()
+    return render_template("historial_reservas.html", reservas=reservas)
+
+# Cancelar reserva
 @app.route("/reservas/cancelar/<int:reserva_id>", methods=["POST"])
 @login_required
 def cancelar_reserva(reserva_id):
@@ -1015,40 +1344,34 @@ def cancelar_reserva(reserva_id):
         id=reserva_id,
         negocio_id=current_user.negocio_id
     ).first_or_404()
-
-    cliente = Cliente.query.get(reserva.cliente_id)
-    negocio = Negocio.query.get(reserva.negocio_id)
-
+    cliente = db.session.get(Cliente, reserva.cliente_id)
+    negocio = db.session.get(Negocio, reserva.negocio_id)
     reserva.estado = "cancelada"
     db.session.commit()
-
     try:
         enviar_cancelacion_emails(cliente, negocio, reserva)
     except Exception as e:
-        print(f"Error enviando email de cancelación: {e}")
-
+        print(f"Error enviando email: {e}")
     return redirect(url_for("ver_reservas"))
 
-with app.app_context():
-    db.create_all()
-    with db.engine.connect() as conn:
-        try:
-            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN plan VARCHAR(20) DEFAULT 'trial'"))
-            conn.commit()
-        except:
-            pass
-        try:
-            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN trial_expira DATETIME"))
-            conn.commit()
-        except:
-            pass
+# Completar reserva
+@app.route("/reservas/completar/<int:reserva_id>", methods=["POST"])
+@login_required
+def completar_reserva(reserva_id):
+    reserva = Reserva.query.filter_by(
+        id=reserva_id,
+        negocio_id=current_user.negocio_id
+    ).first_or_404()
+    reserva.estado = "completada"
+    db.session.commit()
+    return redirect(url_for("ver_reservas"))
 
 # --- Gestionar reserva como cliente (sin login) ---
 @app.route("/reserva/<token>/gestionar", methods=["GET", "POST"])
 def gestionar_reserva(token):
     reserva = Reserva.query.filter_by(token=token).first_or_404()
-    negocio = Negocio.query.get(reserva.negocio_id)
-    cliente = Cliente.query.get(reserva.cliente_id)
+    negocio = db.session.get(Negocio, reserva.negocio_id)
+    cliente = db.session.get(Cliente, reserva.cliente_id)
     mensaje = ""
 
     if request.method == "POST":
@@ -1071,7 +1394,7 @@ def gestionar_reserva(token):
         negocio=negocio,
         cliente=cliente,
         mensaje=mensaje
-    )    
+    )
 
 # --- Manejadores de error ---
 @app.errorhandler(404)
@@ -1081,6 +1404,55 @@ def pagina_no_encontrada(e):
 @app.errorhandler(500)
 def error_servidor(e):
     return render_template("500.html"), 500
+
+with app.app_context():
+    db.create_all()
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN plan VARCHAR(20) DEFAULT 'trial'"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN trial_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN reset_token VARCHAR(100)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN reset_token_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN marca_agua_personalizada VARCHAR(200)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN reset_token VARCHAR(100)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN reset_token_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("UPDATE reserva SET estado = 'pendiente' WHERE estado = 'confirmada'"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("UPDATE reserva SET estado = 'pendiente' WHERE estado IS NULL"))
+            conn.commit()
+        except:
+            pass
 
 if __name__ == "__main__":
     app.run(debug=True)

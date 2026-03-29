@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial de reservas — Reserfy{% endblock %}
+
+{% block contenido %}
+
+<div class="reservas-wrap">
+
+    <div class="reservas-header">
+        <div>
+            <h1 class="reservas-titulo">🗂 Historial de reservas</h1>
+            <p class="reservas-subtitulo">Reservas completadas y canceladas</p>
+        </div>
+        <a href="{{ url_for('ver_reservas') }}" class="btn reservas-historial-btn">
+            📅 Ver pendientes
+        </a>
+    </div>
+
+    {% if reservas %}
+    <div class="reservas-grid">
+        {% for r in reservas %}
+        <div class="reserva-card reserva-card-historial">
+            <div class="reserva-card-header">
+                <div class="reserva-card-cliente">
+                    <div class="reserva-avatar reserva-avatar-historial">{{ r.cliente.nombre[0].upper() }}</div>
+                    <div>
+                        <p class="reserva-cliente-nombre">{{ r.cliente.nombre }}</p>
+                        <p class="reserva-cliente-contacto">{{ r.cliente.telefono or r.cliente.email or '—' }}</p>
+                    </div>
+                </div>
+                {% if r.estado == 'completada' %}
+                <span class="reserva-estado reserva-estado-completada">✓ Completada</span>
+                {% else %}
+                <span class="reserva-estado reserva-estado-cancelada">✗ Cancelada</span>
+                {% endif %}
+            </div>
+
+            <div class="reserva-card-body">
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">✂️ Servicio</span>
+                    <span class="reserva-info-valor">{{ r.servicio }}</span>
+                </div>
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">📅 Fecha</span>
+                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">🕐 Hora</span>
+                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%I:%M %p') }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="reservas-empty">
+        <div class="reservas-empty-icon">📭</div>
+        <h3>No hay reservas en el historial</h3>
+        <p>Las reservas completadas y canceladas aparecerán aquí.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

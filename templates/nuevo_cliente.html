@@ -1,21 +1,62 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block titulo %}Nuevo cliente — Reserfy{% endblock %}
+{% block title %}Nuevo Cliente - Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card" style="max-width: 420px; margin: 0 auto;">
-    <h2>➕ Nuevo cliente</h2>
-    <form method="POST">
-        <div class="form-grupo">
-            <label>Nombre</label>
-            <input type="text" name="nombre" required>
+<div class="main-container-clientes">
+    
+    <div class="clientes-header">
+        <h1>👤 Gestión de Clientes</h1>
+        <p>Añade un nuevo cliente a tu base de datos de manera rápida.</p>
+    </div>
+
+    <div class="form-elite-container">
+        <div class="form-elite-header">
+            <span class="form-elite-icon">➕</span>
+            <h2>Nuevo cliente</h2>
         </div>
-        <div class="form-grupo">
-            <label>Teléfono</label>
-            <input type="text" name="telefono">
-        </div>
-        <button type="submit" class="btn btn-primary">Guardar</button>
-        <a href="{{ url_for('ver_clientes') }}" class="btn" style="margin-left: 1rem; color: #666;">Cancelar</a>
-    </form>
+
+        <form id="form-nuevo-cliente" action="{{ url_for('nuevo_cliente') }}" method="POST">
+            
+            <div class="form-elite-group">
+                <label for="nombre">
+                    <span class="field-icon">👤</span> Nombre *
+                </label>
+                <div class="input-elite-wrapper">
+                    <input type="text" id="nombre" name="nombre" placeholder="Nombre completo" required>
+                    <span class="validation-icon"></span> 
+                </div>
+            </div>
+
+            <div class="form-elite-group">
+                <label for="email">
+                    <span class="field-icon">✉️</span> Email
+                </label>
+                <div class="input-elite-wrapper">
+                    <input type="email" id="email" name="email" placeholder="cliente@email.com">
+                    <span class="validation-icon"></span>
+                </div>
+            </div>
+
+            <div class="form-elite-group">
+                <label for="telefono">
+                    <span class="field-icon">📞</span> Teléfono
+                </label>
+                <div class="input-elite-wrapper">
+                    <input type="tel" id="telefono" name="telefono" placeholder="809-555-1234">
+                    <span class="validation-icon"></span>
+                </div>
+            </div>
+
+            <div class="form-elite-actions">
+                <a href="{{ url_for('ver_clientes') }}" class="btn-elite-secondary">
+                    <span class="btn-icon">❌</span> Cancelar
+                </a>
+                <button type="submit" class="btn-elite-primary">
+                    <span class="btn-icon">💾</span> Guardar cliente
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

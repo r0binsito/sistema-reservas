@@ -3,14 +3,56 @@
 {% block titulo %}Clientes — Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2>👥 Clientes de {{ current_user.negocio.nombre }}</h2>
-        <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success">➕ Agregar manualmente</a>
+<div class="clientes-header">
+    <div class="clientes-header-left">
+        <h1 class="clientes-title">Clientes</h1>
+        <p class="clientes-subtitle">Gestiona tu cartera de clientes</p>
+    </div>
+</div>
+
+<!-- Panel de Búsqueda Predictiva -->
+<div class="search-panel">
+    <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+            type="text"
+            id="busqueda-clientes"
+            class="search-input"
+            placeholder="Buscar por nombre, teléfono o email..."
+            autocomplete="off"
+        >
+        <button class="search-clear" id="search-clear" style="display: none;">✕</button>
+    </div>
+    <a href="{{ url_for('nuevo_cliente') }}" class="btn btn-success search-add-btn">
+        ➕ Agregar manualmente
+    </a>
+
+    <!-- Menú Desplegable Predictivo -->
+    <div class="search-dropdown" id="search-dropdown" style="display: none;">
+        <div class="search-dropdown-content" id="search-results">
+            <!-- Los resultados se cargan dinámicamente aquí -->
+        </div>
+        <div class="search-dropdown-footer" id="search-footer" style="display: none;">
+            <span class="search-hint">Presiona <kbd>Esc</kbd> para cerrar</span>
+        </div>
+    </div>
+
+    <!-- Estado de carga -->
+    <div class="search-loading" id="search-loading" style="display: none;">
+        <span class="search-loading-spinner"></span>
+        <span>Buscando...</span>
+    </div>
+</div>
+
+<!-- Tabla de Clientes -->
+<div class="card clientes-card">
+    <div class="clientes-table-header">
+        <h2 class="clientes-section-title">📋 Lista de Clientes</h2>
+        <span class="clientes-count" id="clientes-count">{{ clientes|length }} clientes</span>
     </div>
 
     {% if clientes %}
-    <table class="tabla">
+    <table class="tabla" id="clientes-tabla">
         <thead>
             <tr>
                 <th>Nombre</th>
@@ -18,10 +60,15 @@
                 <th>Email</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="clientes-body">
             {% for cliente in clientes %}
-            <tr>
-                <td>{{ cliente.nombre }}</td>
+            <tr class="cliente-row" data-id="{{ cliente.id }}">
+                <td>
+                    <div class="cliente-nombre-cell">
+                        <span class="cliente-avatar">👤</span>
+                        <span class="cliente-nombre">{{ cliente.nombre }}</span>
+                    </div>
+                </td>
                 <td>{{ cliente.telefono or '—' }}</td>
                 <td>{{ cliente.email or '—' }}</td>
             </tr>
@@ -29,7 +76,22 @@
         </tbody>
     </table>
     {% else %}
-    <p style="color: #888;">Aún no tienes clientes. Comparte tu link público para recibir reservas.</p>
+    <div class="clientes-empty" id="clientes-empty">
+        <div class="clientes-empty-icon">👥</div>
+        <p class="clientes-empty-text">Aún no tienes clientes registrados.</p>
+        <p class="clientes-empty-subtext">Los clientes se agregan automáticamente cuando hacen una reserva, o puedes agregarlos manualmente.</p>
+    </div>
     {% endif %}
 </div>
+
+<!-- Mensaje cuando no hay resultados de búsqueda -->
+<div class="clientes-no-results" id="clientes-no-results" style="display: none;">
+    <div class="clientes-empty-icon">🔎</div>
+    <p class="clientes-empty-text">No se encontraron clientes</p>
+    <p class="clientes-empty-subtext" id="no-results-query">Intenta con otro término de búsqueda</p>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/clientes.js') }}"></script>
 {% endblock %}

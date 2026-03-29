@@ -3,51 +3,91 @@
 {% block titulo %}Reservas — Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card">
-    <h2>📅 Reservas de {{ current_user.negocio.nombre }}</h2>
+
+<div class="reservas-wrap">
+
+    <div class="reservas-header">
+        <div>
+            <h1 class="reservas-titulo">📅 Reservas pendientes</h1>
+            <p class="reservas-subtitulo">{{ negocio.nombre if negocio else current_user.negocio.nombre }}</p>
+        </div>
+        <a href="{{ url_for('historial_reservas') }}" class="btn reservas-historial-btn">
+            🗂 Historial
+        </a>
+    </div>
+
+    <div class="reservas-aviso-auto">
+        ⏳ Las reservas pendientes se cancelan automáticamente 4 horas después de su hora acordada si no se marcan como
+        completadas.
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alerta alerta-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 
     {% if reservas %}
-    <table class="tabla">
-        <thead>
-            <tr>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Fecha y hora</th>
-                <th>Estado</th>
-                <th>Acción</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in reservas %}
-            <tr>
-                <td>{{ r.cliente.nombre }}</td>
-                <td>{{ r.servicio }}</td>
-                <td>{{ r.fecha_hora.strftime('%d/%m/%Y %I:%M %p') }}</td>
-                <td>
-                    {% if r.estado == 'cancelada' %}
-                        <span style="color: #e74c3c; font-weight: 500;">Cancelada</span>
-                    {% else %}
-                        <span style="color: #27ae60; font-weight: 500;">Confirmada</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if r.estado != 'cancelada' %}
-                    <form method="POST" action="{{ url_for('cancelar_reserva', reserva_id=r.id) }}">
-                        <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('¿Seguro que deseas cancelar esta reserva?')">
-                            Cancelar
-                        </button>
-                    </form>
-                    {% else %}
-                        <span style="color: #aaa;">—</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <div class="reservas-grid">
+        {% for r in reservas %}
+        <div class="reserva-card">
+            <div class="reserva-card-header">
+                <div class="reserva-card-cliente">
+                    <div class="reserva-avatar">{{ r.cliente.nombre[0].upper() }}</div>
+                    <div>
+                        <p class="reserva-cliente-nombre">{{ r.cliente.nombre }}</p>
+                        <p class="reserva-cliente-contacto">{{ r.cliente.telefono or r.cliente.email or '—' }}</p>
+                    </div>
+                </div>
+                <span class="reserva-estado reserva-estado-pendiente">● Pendiente</span>
+            </div>
+
+            <div class="reserva-card-body">
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">✂️ Servicio</span>
+                    <span class="reserva-info-valor">{{ r.servicio }}</span>
+                </div>
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">📅 Fecha</span>
+                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="reserva-info-item">
+                    <span class="reserva-info-label">🕐 Hora</span>
+                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%I:%M %p') }}</span>
+                </div>
+            </div>
+
+            <div class="reserva-card-acciones">
+                <form method="POST" action="{{ url_for('completar_reserva', reserva_id=r.id) }}" style="flex:1;">
+                    <button type="submit" class="btn reserva-btn-completar">
+                        ✓ Completada
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('cancelar_reserva', reserva_id=r.id) }}" style="flex:1;">
+                    <button type="submit" class="btn reserva-btn-cancelar"
+                        onclick="return confirm('¿Cancelar esta reserva?')">
+                        ✗ Cancelar
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
     {% else %}
-    <p style="color: #888;">No tienes reservas aún.</p>
+    <div class="reservas-empty">
+        <div class="reservas-empty-icon">📭</div>
+        <h3>No tienes reservas pendientes</h3>
+        <p>Cuando tus clientes hagan una reserva aparecerá aquí.</p>
+        <a href="{{ url_for('historial_reservas') }}" class="btn btn-primary" style="margin-top:1rem;">
+            Ver historial →
+        </a>
+    </div>
     {% endif %}
+
 </div>
+
 {% endblock %}

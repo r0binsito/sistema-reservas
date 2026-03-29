@@ -3,43 +3,127 @@
 {% block titulo %}Servicios — Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2>✂️ Servicios de {{ current_user.negocio.nombre }}</h2>
-        <a href="{{ url_for('nuevo_servicio') }}" class="btn btn-success">➕ Nuevo servicio</a>
+<div class="servicios-container">
+    <div class="servicios-header">
+        <h1>Mis Servicios 🛠️</h1>
+        <p>Gestiona los servicios que ofreces a tus clientes.</p>
     </div>
 
-    {% if servicios %}
-    <table class="tabla">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Duración</th>
-                <th>Precio</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in servicios %}
-            <tr>
-                <td>{{ s.nombre }}</td>
-                <td>{{ s.duracion_min }} min</td>
-                <td>{{ 'RD$%.2f' % s.precio if s.precio else '—' }}</td>
-                <td style="display: flex; gap: 0.5rem;">
-                    <a href="{{ url_for('editar_servicio', servicio_id=s.id) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">✏️ Editar</a>
-                    <form method="POST" action="{{ url_for('eliminar_servicio', servicio_id=s.id) }}">
-                        <button type="submit" class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;"
-                            onclick="return confirm('¿Eliminar este servicio?')">
-                            🗑️ Eliminar
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="color: #888;">No tienes servicios aún. Agrega tu primer servicio.</p>
-    {% endif %}
+    <div class="servicios-grid-container">
+        <div class="servicios-grid" id="serviciosGrid">
+            {% if servicios %}
+                {% for s in servicios %}
+                <div class="servicio-card" data-service-id="{{ s.id }}" onclick="openEditModal({{ s.id }})">
+                    <div class="servicio-card-header">
+                        <div class="servicio-icon"><span>✨</span></div>
+                        <div class="servicio-actions">
+                            <button class="servicio-action-btn edit-btn" title="Editar" onclick="event.stopPropagation(); openEditModal({{ s.id }})">✏️</button>
+                            <button class="servicio-action-btn delete" title="Eliminar" onclick="event.stopPropagation(); confirmDelete({{ s.id }}, '{{ s.nombre }}')">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="servicio-card-body">
+                        <h3 class="servicio-nombre">{{ s.nombre }}</h3>
+                        <div class="servicio-meta">
+                            <div class="servicio-meta-item">
+                                <span>🕐</span>
+                                <span class="tiempo-formato">
+                                    {% if s.duracion_min >= 60 %}
+                                        {{ (s.duracion_min // 60) }}h {{ (s.duracion_min % 60) if s.duracion_min % 60 > 0 else '' }}
+                                    {% else %}
+                                        {{ s.duracion_min }} min
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="servicio-precio">
+                            {% if s.precio %}RD$ {{ "%.0f"|format(s.precio) }}{% else %}RD$ 0{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="servicio-card-empty create-card" onclick="openCreateModal()">
+                <div class="empty-icon">+</div>
+                <span class="empty-title">Añadir otro servicio</span>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="servicios-modal-overlay" id="servicioModal">
+    <div class="servicios-modal">
+        <div class="servicios-modal-header">
+            <h2 class="servicios-modal-title" id="modalTitle">Nuevo Servicio</h2>
+            <button class="servicios-modal-close" onclick="closeModal()" aria-label="Cerrar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="servicios-modal-body">
+            <form id="servicioForm">
+                <input type="hidden" id="servicioId" name="servicio_id">
+                <div class="servicio-form-group">
+                    <label class="servicio-form-label">Nombre del Servicio</label>
+                    <input type="text" class="servicio-form-input" id="nombre" name="nombre" placeholder="Ej: Corte de cabello..." required>
+                </div>
+                
+                <div class="servicio-form-group">
+                    <label class="servicio-form-label">Duración (minutos)</label>
+                    <small class="form-hint" style="display: block; margin-bottom: 5px; color: #64748b;">Ej: 60 para 1 hora, 90 para 1h 30min</small>
+                    <input type="number" class="servicio-form-input" id="duracion_min" name="duracion_min" list="duraciones_sugeridas" placeholder="Ej: 45" required min="1">
+                    <datalist id="duraciones_sugeridas">
+                        <option value="15">15 minutos</option>
+                        <option value="30">30 minutos</option>
+                        <option value="45">45 minutos</option>
+                        <option value="60">1 hora</option>
+                        <option value="90">1.5 horas</option>
+                        <option value="120">2 horas</option>
+                    </datalist>
+                </div>
+
+                <div class="servicio-form-group">
+                    <label class="servicio-form-label">Precio</label>
+                    <div class="servicio-precio-input-wrap">
+                        <span class="servicio-precio-prefix">RD$</span>
+                        <input type="number" class="servicio-form-input" id="precio" name="precio" placeholder="0" min="0" step="50">
+                    </div>
+                </div>
+
+                <div class="servicio-form-actions">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-modal btn-save" id="btnGuardar">
+                        <span id="btnText">Guardar servicio</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="servicios-modal-overlay" id="deleteModal">
+    <div class="servicios-modal">
+        <div class="servicios-modal-body delete-center">
+            <div class="delete-icon">🗑️</div>
+            <h3>¿Eliminar servicio?</h3>
+            <p>Se borrará "<span id="deleteServiceName"></span>" permanentemente.</p>
+            <div class="servicio-form-actions">
+                <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
+                <button class="btn-modal btn-delete-confirm" id="btnConfirmDelete">Sí, eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="servicios-toast" id="serviciosToast">
+    <span class="toast-icon" id="toastIcon"></span>
+    <span class="toast-message" id="toastMessage"></span>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="{{ url_for('static', filename='js/servicios.js') }}"></script>
 {% endblock %}

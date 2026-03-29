@@ -1,24 +1,407 @@
 {% extends "base.html" %}
 
-{% block titulo %}Dashboard — Reserfy{% endblock %}
+{% block titulo %}Dashboard — {{ current_user.negocio.nombre }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
 
 {% block contenido %}
-<div class="card">
-    <h2>Bienvenido, {{ current_user.negocio.nombre }} 👋</h2>
-    <p style="color: #666; margin-bottom: 0.5rem;">Tu link público de reservas:</p>
-    <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}"
-       target="_blank"
-       style="color: #3498db; font-weight: 500;">
-        {{ request.host_url }}b/{{ current_user.negocio.slug }}
-    </a>
-    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #eee;">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <a href="{{ url_for('ver_clientes') }}" class="btn btn-primary">👥 Ver clientes</a>
-        <a href="{{ url_for('ver_reservas') }}" class="btn btn-primary">📋 Ver agenda</a>
-        <a href="{{ url_for('ver_servicios') }}" class="btn btn-success">✂️ Mis servicios</a>
-        <a href="{{ url_for('configurar_horario') }}" class="btn btn-success">🕐 Configurar horario</a>
-        <a href="{{ url_for('perfil_negocio') }}" class="btn btn-success">👤 Perfil</a>
-        <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}" class="btn btn-primary">📅 Nueva reserva</a>
+
+{# === VARIABLES DE PLAN === #}
+{% set plan = plan_actual or 'trial' %}
+{% set limites = plan_limites %}
+{% set uso = plan_uso %}
+{% set es_elite = plan == 'elite' %}
+{% set es_pro = plan == 'pro' %}
+{% set es_starter = plan == 'starter' %}
+{% set es_trial = plan == 'trial' %}
+
+{# === DETECTAR ONBOARDING === #}
+{% set tiene_horario = current_user.negocio.horarios|length > 0 %}
+{% set tiene_servicios = current_user.negocio.servicios|selectattr('activo', 'equalto', true)|list|length > 0 %}
+{% set onboarding_completo = tiene_horario and tiene_servicios %}
+
+{# === VARIABLES PARA MODAL DE ÉXITO === #}
+{% set mostrar_modal_exito = onboarding_just_completed|default(false) %}
+
+<div class="dashboard-wrapper">
+
+    {# === MODAL DE ONBOARDING (BLOQUEANTE) === #}
+    {% if not onboarding_completo %}
+    <div class="onboarding-modal-overlay" id="onboarding-modal">
+        <div class="onboarding-modal">
+            <div class="onboarding-modal-icon">
+                <span>&#128640;</span>
+            </div>
+            <h2 class="onboarding-modal-title">&#161;Casi listo!</h2>
+            <p class="onboarding-modal-text">
+                Solo falta configurar tu negocio para activar tu link de reservas.
+            </p>
+
+            <div class="onboarding-steps">
+                <div class="onboarding-step-item {% if tiene_horario %}completed{% endif %}">
+                    <div class="onboarding-step-circle">
+                        {% if tiene_horario %}&#10003;{% else %}1{% endif %}
+                    </div>
+                    <span class="onboarding-step-label">Horario</span>
+                </div>
+                <div class="onboarding-step-line {% if tiene_horario %}completed{% endif %}"></div>
+                <div class="onboarding-step-item {% if tiene_servicios %}completed{% endif %}">
+                    <div class="onboarding-step-circle">
+                        {% if tiene_servicios %}&#10003;{% else %}2{% endif %}
+                    </div>
+                    <span class="onboarding-step-label">Servicios</span>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                {% if not tiene_horario %}
+                <a href="{{ url_for('configurar_horario') }}" class="btn btn-onboarding">
+                    <span class="btn-onboarding-icon">&#128336;</span>
+                    <span>Configurar horario</span>
+                </a>
+                {% endif %}
+                {% if not tiene_servicios %}
+                <a href="{{ url_for('ver_servicios') }}" class="btn btn-onboarding">
+                    <span class="btn-onboarding-icon">&#9981;</span>
+                    <span>Agregar servicios</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <p class="onboarding-hint">
+                Podr&#225;s recibir reservas una vez completes ambos pasos.
+            </p>
+        </div>
     </div>
+    {% endif %}
+
+    {# === MODAL DE ÉXITO (ONBOARDING COMPLETADO) === #}
+    {% if mostrar_modal_exito %}
+    <div class="success-modal-overlay" id="success-modal">
+        <div class="success-modal">
+            <div class="success-modal-content" id="success-content">
+                <div class="success-spinner">
+                    <div class="spinner-ring"></div>
+                </div>
+                <h3 class="success-title" id="success-title">Configuraci&#243;n completada</h3>
+                <p class="success-text" id="success-text">Generando tu link de reservas...</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# === HEADER DE BIENVENIDA === #}
+    <div class="dashboard-header">
+        <div class="dashboard-header-left">
+            <h1 class="dashboard-title">Bienvenido, {{ current_user.negocio.nombre }}</h1>
+            <p class="dashboard-subtitle">Gestiona tu negocio desde un solo lugar</p>
+        </div>
+        <div class="dashboard-header-right">
+            <span class="plan-badge plan-badge-{{ plan }}">
+                {% if plan == 'trial' %}Prueba Gratis
+                {% elif plan == 'starter' %}Starter
+                {% elif plan == 'pro' %}Pro
+                {% elif plan == 'elite' %}Elite{% endif %}
+            </span>
+        </div>
+    </div>
+
+    {# === SECCIÓN DE LINK PÚBLICO === #}
+    <div class="dashboard-link-section">
+        <button class="link-copy-btn" id="copy-link-btn" data-url="{{ request.host_url }}b/{{ current_user.negocio.slug }}">
+            <span class="link-copy-icon">&#128279;</span>
+            <span class="link-copy-text">Copiar link p&#250;blico</span>
+        </button>
+    </div>
+
+    {# === GRID DE ESTADÍSTICAS DINÁMICAS === #}
+    <div class="dashboard-stats-grid">
+
+        {# === FILA 1: SIEMPRE VISIBLE (TODOS LOS PLANES) === #}
+
+        {# Citas de Hoy - SIEMPRE #}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128197;</span>
+                <span class="stat-card-title">Citas de hoy</span>
+            </div>
+            <div class="stat-card-body">
+                <span class="stat-card-value">{{ stats.citas_hoy if stats else 0 }}</span>
+            </div>
+        </div>
+
+        {# Próxima Cita - SIEMPRE #}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128337;</span>
+                <span class="stat-card-title">Pr&#243;xima cita</span>
+            </div>
+            <div class="stat-card-body">
+                {% if stats and stats.proxima_cita %}
+                <div class="stat-card-list">
+                    <span class="stat-card-value-small" style="font-weight: 600; color: var(--text-primary);">{{ stats.proxima_cita.cliente }}</span>
+                    <span class="stat-card-value-small" style="color: var(--secondary);">{{ stats.proxima_cita.servicio }} · {{ stats.proxima_cita.hora }}</span>
+                </div>
+                {% else %}
+                <span class="stat-card-value stat-card-value-small">Sin citas</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Clientes Registrados - SIEMPRE #}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128101;</span>
+                <span class="stat-card-title">Clientes</span>
+            </div>
+            <div class="stat-card-body">
+                <span class="stat-card-value">{{ uso.clientes if uso else 0 }}</span>
+                {% if limites and limites.clientes < 999 %}
+                <span class="stat-card-limit">/ {{ limites.clientes }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# === FILA 2: PLAN PRO Y ELITE (BLOQUEADO EN STARTER/TRIAL) === #}
+
+        {# Tasa de Asistencia - BLOQUEADO EN STARTER/TRIAL #}
+        {% if es_starter or es_trial %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#9989;</span>
+                    <span class="stat-card-title">Tasa de asistencia</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value">--%</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128274;</span>
+                    <span class="locked-text">Disponible en Pro</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked">
+                        <span>&#128640;</span> Actualizar para desbloquear
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#9989;</span>
+                <span class="stat-card-title">Tasa de asistencia</span>
+            </div>
+            <div class="stat-card-body">
+                <span class="stat-card-value">{{ stats.tasa_asistencia if stats else 100 }}%</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Servicios más Pedidos - BLOQUEADO EN STARTER/TRIAL #}
+        {% if es_starter or es_trial %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#128200;</span>
+                    <span class="stat-card-title">Top servicios</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value stat-card-value-small">---</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128274;</span>
+                    <span class="locked-text">Disponible en Pro</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked">
+                        <span>&#128640;</span> Actualizar para desbloquear
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128200;</span>
+                <span class="stat-card-title">Top servicios</span>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-list">
+                    {% if stats and stats.top_servicios and stats.top_servicios|length > 0 %}
+                        {% for servicio in stats.top_servicios %}
+                        <span class="stat-card-value-small">{{ servicio.nombre[:15] }} ({{ servicio.cantidad }})</span>
+                        {% endfor %}
+                    {% else %}
+                    <span class="stat-card-value-small">Sin datos</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Crecimiento - BLOQUEADO EN STARTER/TRIAL #}
+        {% if es_starter or es_trial %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#128202;</span>
+                    <span class="stat-card-title">Crecimiento</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value">--%</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128274;</span>
+                    <span class="locked-text">Disponible en Pro</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked">
+                        <span>&#128640;</span> Actualizar para desbloquear
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128202;</span>
+                <span class="stat-card-title">Crecimiento mensual</span>
+            </div>
+            <div class="stat-card-body">
+                {% if stats and stats.crecimiento_clientes > 0 %}
+                <span class="stat-card-value stat-card-positive">+{{ stats.crecimiento_clientes }}%</span>
+                {% elif stats and stats.crecimiento_clientes < 0 %}
+                <span class="stat-card-value" style="color: var(--danger);">{{ stats.crecimiento_clientes }}%</span>
+                {% else %}
+                <span class="stat-card-value">+0%</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# === FILA 3: SOLO ELITE (BLOQUEADO EN PRO, STARTER, TRIAL) === #}
+
+        {# Ingresos Reales - SOLO ELITE #}
+        {% if es_elite %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128176;</span>
+                <span class="stat-card-title">Ingresos del mes</span>
+            </div>
+            <div class="stat-card-body">
+                <span class="stat-card-value">${{ "{:,.0f}".format(stats.ingresos_mes) if stats else '0' }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#128176;</span>
+                    <span class="stat-card-title">Ingresos del mes</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value">$--</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128081;</span>
+                    <span class="locked-text">Exclusivo Elite</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked btn-upgrade-elite">
+                        <span>&#11088;</span> Actualizar a Elite
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Rendimiento de Staff - SOLO ELITE #}
+        {% if es_elite %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128100;</span>
+                <span class="stat-card-title">Rendimiento staff</span>
+            </div>
+            <div class="stat-card-body">
+                <div class="stat-card-list">
+                    <span class="stat-card-value-small" style="color: var(--text-muted);">
+                        Pr&#243;ximamente
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#128100;</span>
+                    <span class="stat-card-title">Rendimiento staff</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value stat-card-value-small">---</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128081;</span>
+                    <span class="locked-text">Exclusivo Elite</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked btn-upgrade-elite">
+                        <span>&#11088;</span> Actualizar a Elite
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Ticket Promedio - SOLO ELITE #}
+        {% if es_elite %}
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <span class="stat-card-icon">&#128179;</span>
+                <span class="stat-card-title">Ticket promedio</span>
+            </div>
+            <div class="stat-card-body">
+                <span class="stat-card-value">${{ "{:,.0f}".format(stats.ticket_promedio) if stats else '0' }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="stat-card stat-card-locked">
+            <div class="stat-card-content-blurred">
+                <div class="stat-card-header">
+                    <span class="stat-card-icon">&#128179;</span>
+                    <span class="stat-card-title">Ticket promedio</span>
+                </div>
+                <div class="stat-card-body">
+                    <span class="stat-card-value">$--</span>
+                </div>
+            </div>
+            <div class="locked-overlay">
+                <div class="locked-content">
+                    <span class="locked-icon">&#128081;</span>
+                    <span class="locked-text">Exclusivo Elite</span>
+                    <a href="{{ url_for('upgrade') }}" class="btn btn-upgrade-locked btn-upgrade-elite">
+                        <span>&#11088;</span> Actualizar a Elite
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
 </div>
+
+{# === MARCA DE AGUA (SOLO SI NO ES ELITE) === #}
+{% if not es_elite %}
+<div class="powered-by-reserfy">
+    <span>Powered by</span>
+    <a href="{{ url_for('index') }}" target="_blank">Reserfy</a>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
 {% endblock %}

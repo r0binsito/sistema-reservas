@@ -95,7 +95,12 @@
                         <div class="reserva-servicio-emoji">✂️</div>
                         <div class="reserva-servicio-nombre">{{ s.nombre }}</div>
                         <div class="reserva-servicio-info">
-                            <span>⏱ {{ s.duracion_min }} min</span>
+                            <span>⏱ {% set horas = s.duracion_min // 60 %}{% set minutos = s.duracion_min % 60 %}{% if horas > 0 %}{% if minutos > 0 %}{{ horas }}h {{ minutos }}min{% else %}{{ horas }}h{% endif %}{% else %}{{ minutos }} min{% endif %}</span>
+</xai:function_call >
+
+<xai:function_call name="edit_file">
+<parameter name="path">
+
                             {% if s.precio %}
                             <span class="reserva-servicio-precio">${{ '%.2f' % s.precio }}</span>
                             {% endif %}

@@ -3,141 +3,210 @@
 {% block titulo %}Perfil del negocio — Reserfy{% endblock %}
 
 {% block contenido %}
-<div class="card" style="max-width: 600px; margin: 0 auto;">
-    <h2>🏪 Perfil del negocio</h2>
+
+<div class="perfil-wrap">
+
+    <div class="perfil-header">
+        <h1 class="perfil-titulo">🏪 Perfil del negocio</h1>
+        <p class="perfil-subtitulo">Configura la información pública de tu negocio</p>
+    </div>
+
     <form method="POST" enctype="multipart/form-data" id="perfil-form">
 
-        <!-- Logo redondo con cropper -->
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="position: relative; display: inline-block;">
-                {% if negocio.logo_url %}
-                    <img id="logo-display" src="{{ negocio.logo_url }}" alt="Logo"
-                         style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db;">
-                {% else %}
-                    <div id="logo-placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: #3498db; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                        <span style="color: white; font-size: 2.5rem;">📅</span>
+        <div class="perfil-grid">
+
+            <!-- Columna izquierda — Logo -->
+            <div class="card perfil-logo-card">
+                <h3 class="perfil-seccion-titulo">Logo del negocio</h3>
+                <p class="perfil-seccion-sub">Aparece en tu página pública de reservas</p>
+
+                <div class="logo-dropzone" id="logo-dropzone" onclick="document.getElementById('logo-input').click()">
+                    <div id="dropzone-contenido">
+                        {% if negocio.logo_url %}
+                        <img src="{{ negocio.logo_url }}" id="logo-preview-img"
+                            style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid rgba(145,42,92,0.3); margin-bottom:0.5rem;">
+                        <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Logo actual</p>
+                        <p style="font-size:0.72rem; color:var(--secondary); margin:0.2rem 0 0;">Haz clic para cambiar</p>
+                        {% else %}
+                        <span class="logo-dropzone-icon">✨</span>
+                        <p class="logo-dropzone-titulo">Arrastra tu logo aquí o haz clic</p>
+                        <p class="logo-dropzone-sub">PNG, JPG · Máx 5MB</p>
+                        <button type="button" class="logo-dropzone-btn">Seleccionar imagen</button>
+                        {% endif %}
                     </div>
-                    <img id="logo-display" src="" alt="Logo"
-                         style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3498db; display: none;">
+                    <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="iniciarCropper(this)">
+                    <input type="hidden" name="logo_recortado" id="logo-recortado">
+                </div>
+
+                <!-- Info del negocio -->
+                <div class="perfil-info-card">
+                    <div class="perfil-info-item">
+                        <span class="perfil-info-label">Plan</span>
+                        <span class="perfil-info-valor perfil-plan-badge perfil-plan-{{ plan_actual }}">
+                            {{ plan_actual | upper }}
+                        </span>
+                    </div>
+                    <div class="perfil-info-item">
+                        <span class="perfil-info-label">Link público</span>
+                        <a href="{{ url_for('reserva_publica', slug=negocio.slug) }}"
+                            target="_blank" class="perfil-info-link">
+                            /b/{{ negocio.slug }}
+                        </a>
+                    </div>
+                    <div class="perfil-info-item">
+                        <span class="perfil-info-label">Clientes</span>
+                        <span class="perfil-info-valor">{{ plan_uso.clientes }}</span>
+                    </div>
+                    <div class="perfil-info-item">
+                        <span class="perfil-info-label">Servicios</span>
+                        <span class="perfil-info-valor">{{ plan_uso.servicios }}</span>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('upgrade') }}" class="perfil-upgrade-btn">
+                    ⚡ Mejorar plan →
+                </a>
+            </div>
+
+            <!-- Columna derecha — Formulario -->
+            <div class="card perfil-form-card">
+                <h3 class="perfil-seccion-titulo">Información del negocio</h3>
+
+                <div class="form-grupo">
+                    <label>Nombre del negocio *</label>
+                    <input type="text" name="nombre" required value="{{ negocio.nombre }}">
+                </div>
+
+                <div class="form-grupo">
+                    <label>Tipo de negocio</label>
+                    <select name="tipo">
+                        <option value="">Selecciona un tipo</option>
+                        <option value="Barbería" {{ 'selected' if negocio.tipo == 'Barbería' }}>✂️ Barbería</option>
+                        <option value="Salón de belleza" {{ 'selected' if negocio.tipo == 'Salón de belleza' }}>💅 Salón de belleza</option>
+                        <option value="Consultorio médico" {{ 'selected' if negocio.tipo == 'Consultorio médico' }}>🏥 Consultorio médico</option>
+                        <option value="Consultorio dental" {{ 'selected' if negocio.tipo == 'Consultorio dental' }}>🦷 Consultorio dental</option>
+                        <option value="Spa" {{ 'selected' if negocio.tipo == 'Spa' }}>🧖 Spa</option>
+                        <option value="Restaurante" {{ 'selected' if negocio.tipo == 'Restaurante' }}>🍽️ Restaurante</option>
+                        <option value="Gimnasio" {{ 'selected' if negocio.tipo == 'Gimnasio' }}>💪 Gimnasio</option>
+                        <option value="Otro" {{ 'selected' if negocio.tipo not in ['Barbería','Salón de belleza','Consultorio médico','Consultorio dental','Spa','Restaurante','Gimnasio', ''] }}>🏢 Otro</option>
+                    </select>
+                </div>
+
+                <div class="form-grupo">
+                    <label>Eslogan</label>
+                    <input type="text" name="eslogan"
+                        placeholder="Ej: El mejor corte de tu vida"
+                        value="{{ negocio.eslogan or '' }}">
+                </div>
+
+                <div class="form-fila">
+                    <div class="form-grupo">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono"
+                            placeholder="809-555-1234"
+                            value="{{ negocio.telefono or '' }}">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Dirección</label>
+                        <input type="text" name="direccion"
+                            placeholder="Calle Principal #123"
+                            value="{{ negocio.direccion or '' }}">
+                    </div>
+                </div>
+
+                {% if plan_actual == 'elite' %}
+                <div class="form-grupo">
+                    <label>Marca de agua personalizada</label>
+                    <input type="text" name="marca_agua_personalizada"
+                        placeholder="Ej: Powered by Mi Negocio"
+                        value="{{ negocio.marca_agua_personalizada or '' }}">
+                    <small style="color:var(--text-muted); font-size:0.75rem;">
+                        Aparece en el pie de tu página pública. Exclusivo plan Elite.
+                    </small>
+                </div>
                 {% endif %}
-                <!-- Botón flotante para cambiar logo -->
-                <div onclick="document.getElementById('logo-input').click()"
-                     style="position: absolute; bottom: 0; right: 0; background: #3498db; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
-                    <span style="color: white; font-size: 0.9rem;">✏️</span>
-                </div>
-            </div>
-            <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="iniciarCropper(this)">
-            <input type="hidden" name="logo_recortado" id="logo-recortado">
-        </div>
 
-        <!-- Modal del cropper -->
-        <div id="modal-cropper" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-            <div style="background:white; border-radius:12px; padding:1.5rem; max-width:500px; width:90%;">
-                <h3 style="margin-bottom:1rem;">Ajusta tu logo</h3>
-                <div style="max-height:350px; overflow:hidden;">
-                    <img id="imagen-cropper" style="max-width:100%;">
+                <div class="perfil-acciones">
+                    <a href="{{ url_for('dashboard') }}" class="btn">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar cambios →</button>
                 </div>
-                <div style="display:flex; gap:1rem; margin-top:1rem; justify-content:flex-end;">
-                    <button type="button" onclick="cancelarCropper()" class="btn" style="color:#666;">Cancelar</button>
-                    <button type="button" onclick="confirmarCropper()" class="btn btn-primary">Confirmar</button>
-                </div>
+
             </div>
         </div>
 
-        <div class="form-grupo">
-            <label>Nombre del negocio</label>
-            <input type="text" name="nombre" required value="{{ negocio.nombre }}">
-        </div>
-        <div class="form-grupo">
-            <label>Tipo de negocio</label>
-            <select name="tipo" style="width:100%; padding: 0.7rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
-                <option value="">Selecciona un tipo</option>
-                <option value="Barbería" {{ 'selected' if negocio.tipo == 'Barbería' }}>Barbería</option>
-                <option value="Salón de belleza" {{ 'selected' if negocio.tipo == 'Salón de belleza' }}>Salón de belleza</option>
-                <option value="Consultorio médico" {{ 'selected' if negocio.tipo == 'Consultorio médico' }}>Consultorio médico</option>
-                <option value="Consultorio dental" {{ 'selected' if negocio.tipo == 'Consultorio dental' }}>Consultorio dental</option>
-                <option value="Spa" {{ 'selected' if negocio.tipo == 'Spa' }}>Spa</option>
-                <option value="Restaurante" {{ 'selected' if negocio.tipo == 'Restaurante' }}>Restaurante</option>
-                <option value="Gimnasio" {{ 'selected' if negocio.tipo == 'Gimnasio' }}>Gimnasio</option>
-                <option value="Otro" {{ 'selected' if negocio.tipo == 'Otro' }}>Otro</option>
-            </select>
-        </div>
-        <div class="form-grupo">
-            <label>Eslogan</label>
-            <input type="text" name="eslogan" placeholder="Ej: El mejor corte de tu vida" value="{{ negocio.eslogan or '' }}">
-        </div>
-        <div class="form-grupo">
-            <label>Teléfono de contacto</label>
-            <input type="text" name="telefono" placeholder="Ej: 809-555-1234" value="{{ negocio.telefono or '' }}">
-        </div>
-        <div class="form-grupo">
-            <label>Dirección</label>
-            <input type="text" name="direccion" placeholder="Ej: Calle Principal #123, Santiago" value="{{ negocio.direccion or '' }}">
-        </div>
-        <button type="submit" class="btn btn-primary">Guardar cambios</button>
-        <a href="{{ url_for('dashboard') }}" class="btn" style="margin-left: 1rem; color: #666;">Cancelar</a>
     </form>
 </div>
 
-<!-- Cropper.js CDN -->
+<!-- Modal Cropper Pro -->
+<div id="modal-cropper" class="modal-cropper-overlay">
+    <div class="modal-cropper-box">
+        <h3 class="modal-cropper-titulo">✂️ Ajusta tu logo</h3>
+
+        <div class="modal-cropper-layout">
+            <div class="modal-cropper-img-wrap">
+                <img id="imagen-cropper" style="max-width:100%;">
+            </div>
+            <div class="modal-cropper-preview-wrap">
+                <p class="modal-cropper-preview-label">Previsualización</p>
+                <div class="modal-cropper-preview-circle">
+                    <img id="preview-grande" src="" alt="">
+                </div>
+                <div class="modal-cropper-preview-sm">
+                    <img id="preview-chico" src="" alt="">
+                </div>
+                <p class="modal-cropper-preview-sizes">Grande · Pequeño</p>
+            </div>
+        </div>
+
+        <div class="modal-cropper-controles">
+            <div class="modal-cropper-control">
+                <span class="modal-cropper-control-label">🔍 Zoom</span>
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarZoom(-0.1)">−</button>
+                <input type="range" class="modal-cropper-slider" id="slider-zoom"
+                    min="0.1" max="3" step="0.05" value="1"
+                    oninput="actualizarZoom(this.value)">
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarZoom(0.1)">+</button>
+                <span class="modal-cropper-control-value" id="valor-zoom">1x</span>
+            </div>
+            <div class="modal-cropper-control">
+                <span class="modal-cropper-control-label">🔄 Rotación</span>
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarRotacion(-1)">−</button>
+                <input type="range" class="modal-cropper-slider" id="slider-rotacion"
+                    min="-180" max="180" step="1" value="0"
+                    oninput="actualizarRotacion(this.value)">
+                <button type="button" class="modal-ctrl-btn" onclick="cambiarRotacion(1)">+</button>
+                <span class="modal-cropper-control-value" id="valor-rotacion">0°</span>
+            </div>
+        </div>
+
+        <div class="modal-cropper-acciones">
+            <button type="button" onclick="cancelarCropper()" class="btn">Cancelar</button>
+            <button type="button" onclick="confirmarCropperPerfil()" class="btn btn-primary">✓ Confirmar y guardar</button>
+        </div>
+    </div>
+</div>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
+<script src="{{ url_for('static', filename='js/registro.js') }}"></script>
 <script>
-let cropperInstance = null;
-
-function iniciarCropper(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.getElementById('imagen-cropper');
-            img.src = e.target.result;
-            const modal = document.getElementById('modal-cropper');
-            modal.style.display = 'flex';
-
-            if (cropperInstance) {
-                cropperInstance.destroy();
-            }
-
-            cropperInstance = new Cropper(img, {
-                aspectRatio: 1,
-                viewMode: 1,
-                movable: true,
-                zoomable: true,
-                scalable: false,
-                cropBoxResizable: true
-            });
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-function confirmarCropper() {
+function confirmarCropperPerfil() {
     if (cropperInstance) {
-        const canvas = cropperInstance.getCroppedCanvas({
-            width: 400,
-            height: 400
-        });
+        const canvas = cropperInstance.getCroppedCanvas({ width: 400, height: 400 });
         const base64 = canvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('logo-recortado').value = base64;
 
-        // Mostrar preview
-        const display = document.getElementById('logo-display');
-        const placeholder = document.getElementById('logo-placeholder');
-        display.src = base64;
-        display.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
-
+        const contenido = document.getElementById('dropzone-contenido');
+        if (contenido) {
+            contenido.innerHTML = `
+                <img src="${base64}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid rgba(250,143,62,0.5); margin-bottom:0.5rem;">
+                <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Logo seleccionado ✓</p>
+                <p style="font-size:0.72rem; color:var(--secondary); margin:0.2rem 0 0;">Haz clic para cambiar</p>
+            `;
+        }
         cancelarCropper();
     }
 }
-
-function cancelarCropper() {
-    document.getElementById('modal-cropper').style.display = 'none';
-    if (cropperInstance) {
-        cropperInstance.destroy();
-        cropperInstance = null;
-    }
-}
 </script>
+
 {% endblock %}
