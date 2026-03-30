@@ -1841,5 +1841,36 @@ with app.app_context():
         except:
             pass
 
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN nombre VARCHAR(100)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN telefono VARCHAR(20)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN role VARCHAR(20) DEFAULT 'admin'"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN invitation_token VARCHAR(100)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN invitation_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
+
 if __name__ == "__main__":
     app.run(debug=True)
