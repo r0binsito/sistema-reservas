@@ -78,6 +78,9 @@ app.register_blueprint(google_bp, url_prefix="/auth")
 
 db.init_app(app)
 
+from flask_migrate import Migrate
+migrate = Migrate(app, db)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
