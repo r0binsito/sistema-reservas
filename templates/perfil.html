@@ -63,9 +63,11 @@
                     </div>
                 </div>
 
+                {% if plan_actual != 'elite' %}
                 <a href="{{ url_for('upgrade') }}" class="perfil-upgrade-btn">
                     ⚡ Mejorar plan →
                 </a>
+                {% endif %}
             </div>
 
             <!-- Columna derecha — Formulario -->
@@ -123,6 +125,120 @@
                     <small style="color:var(--text-muted); font-size:0.75rem;">
                         Aparece en el pie de tu página pública. Exclusivo plan Elite.
                     </small>
+                </div>
+
+                <!-- Panel de personalización de marca Elite -->
+                <div class="perfil-marca-panel">
+                    <h4 class="perfil-marca-titulo">🎨 Personalización de Marca</h4>
+                    <p class="perfil-marca-sub">Personaliza los colores de tu página pública de reservas</p>
+
+                    <div class="color-pickers-grid">
+                        <!-- Color de Acento -->
+                        <div class="color-picker-item">
+                            <label class="color-picker-label">Color de Acento</label>
+                            <p class="color-picker-desc">Botones, iconos y pasos activos</p>
+                            <div class="color-picker-wrap">
+                                <input type="color" name="color_acento" id="color_acento"
+                                    value="{{ negocio.color_acento or '#FA8F3E' }}"
+                                    class="color-picker-input" data-preview="acento">
+                                <span class="color-picker-hex" id="hex_acento">{{ negocio.color_acento or '#FA8F3E' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Gradiente Banner -->
+                        <div class="color-picker-item">
+                            <label class="color-picker-label">Gradiente Banner</label>
+                            <p class="color-picker-desc">Barra superior del header</p>
+                            <div class="color-picker-duo">
+                                <div class="color-picker-wrap mini">
+                                    <input type="color" name="gradiente_banner_inicio" id="grad_banner_inicio"
+                                        value="{{ negocio.gradiente_banner_inicio or '#912A5C' }}"
+                                        class="color-picker-input" data-preview="banner-start">
+                                    <span class="color-picker-hex mini" id="hex_banner_inicio">{{ negocio.gradiente_banner_inicio or '#912A5C' }}</span>
+                                </div>
+                                <span class="gradient-arrow">→</span>
+                                <div class="color-picker-wrap mini">
+                                    <input type="color" name="gradiente_banner_fin" id="grad_banner_fin"
+                                        value="{{ negocio.gradiente_banner_fin or '#FFD700' }}"
+                                        class="color-picker-input" data-preview="banner-end">
+                                    <span class="color-picker-hex mini" id="hex_banner_fin">{{ negocio.gradiente_banner_fin or '#FFD700' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gradiente Avatar -->
+                        <div class="color-picker-item">
+                            <label class="color-picker-label">Gradiente Avatar</label>
+                            <p class="color-picker-desc">Fondo del logo placeholder</p>
+                            <div class="color-picker-duo">
+                                <div class="color-picker-wrap mini">
+                                    <input type="color" name="gradiente_avatar_inicio" id="grad_avatar_inicio"
+                                        value="{{ negocio.gradiente_avatar_inicio or '#912A5C' }}"
+                                        class="color-picker-input" data-preview="avatar-start">
+                                    <span class="color-picker-hex mini" id="hex_avatar_inicio">{{ negocio.gradiente_avatar_inicio or '#912A5C' }}</span>
+                                </div>
+                                <span class="gradient-arrow">→</span>
+                                <div class="color-picker-wrap mini">
+                                    <input type="color" name="gradiente_avatar_fin" id="grad_avatar_fin"
+                                        value="{{ negocio.gradiente_avatar_fin or '#FA8F3E' }}"
+                                        class="color-picker-input" data-preview="avatar-end">
+                                    <span class="color-picker-hex mini" id="hex_avatar_fin">{{ negocio.gradiente_avatar_fin or '#FA8F3E' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vista previa en tiempo real -->
+                    <div class="preview-container">
+                        <h5 class="preview-title">Vista Previa</h5>
+                        <div class="preview-reserva-wrap" id="preview-wrap">
+                            <!-- Header simulado -->
+                            <div class="preview-header" id="preview-header">
+                                <div class="preview-header-bar" id="preview-banner"></div>
+                                <div class="preview-avatar-wrap">
+                                    {% if negocio.logo_url %}
+                                    <img src="{{ negocio.logo_url }}" class="preview-avatar-img">
+                                    {% else %}
+                                    <div class="preview-avatar-placeholder" id="preview-avatar">📅</div>
+                                    {% endif %}
+                                </div>
+                                <div class="preview-info">
+                                    <div class="preview-nombre-wrap">
+                                        <span class="preview-nombre">{{ negocio.nombre }}</span>
+                                        <span class="preview-verificado">✓</span>
+                                    </div>
+                                    <span class="preview-badge" id="preview-badge">{{ negocio.tipo or 'Negocio' }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Pasos simulados -->
+                            <div class="preview-steps">
+                                <div class="preview-step activo" id="preview-step-1">
+                                    <div class="preview-step-circle" id="preview-step-circle">1</div>
+                                    <span class="preview-step-label" id="preview-step-label">Servicio</span>
+                                </div>
+                                <div class="preview-step-line"></div>
+                                <div class="preview-step">
+                                    <div class="preview-step-circle">2</div>
+                                    <span class="preview-step-label">Fecha</span>
+                                </div>
+                                <div class="preview-step-line"></div>
+                                <div class="preview-step">
+                                    <div class="preview-step-circle">3</div>
+                                    <span class="preview-step-label">Datos</span>
+                                </div>
+                            </div>
+
+                            <!-- Contacto simulado -->
+                            <div class="preview-contacto">
+                                <span class="preview-contacto-item" id="preview-icon-tel">📞 809-555-1234</span>
+                                <span class="preview-contacto-item" id="preview-icon-loc">📍 Tu dirección</span>
+                            </div>
+
+                            <!-- Botón simulado -->
+                            <button class="preview-btn" id="preview-btn">Siguiente</button>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
 
@@ -207,6 +323,103 @@ function confirmarCropperPerfil() {
         cancelarCropper();
     }
 }
+
+// Color picker para Elite - Vista previa en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    // Mapeo de inputs a elementos de preview
+    const colorInputs = {
+        'color_acento': {
+            hex: 'hex_acento',
+            apply: (color) => {
+                // Botón
+                const btn = document.getElementById('preview-btn');
+                if (btn) btn.style.background = color;
+                // Círculo paso activo
+                const circle = document.getElementById('preview-step-circle');
+                if (circle) circle.style.background = color;
+                // Label paso activo
+                const label = document.getElementById('preview-step-label');
+                if (label) label.style.color = color;
+                // Badge
+                const badge = document.getElementById('preview-badge');
+                if (badge) badge.style.background = color;
+                // Iconos de contacto
+                const tel = document.getElementById('preview-icon-tel');
+                const loc = document.getElementById('preview-icon-loc');
+                if (tel) tel.style.color = color;
+                if (loc) loc.style.color = color;
+            }
+        },
+        'grad_banner_inicio': {
+            hex: 'hex_banner_inicio',
+            apply: (color) => updateGradient('preview-banner', color, null)
+        },
+        'grad_banner_fin': {
+            hex: 'hex_banner_fin',
+            apply: (color) => {
+                const start = document.getElementById('grad_banner_inicio')?.value || '#912A5C';
+                updateGradient('preview-banner', start, color);
+            }
+        },
+        'grad_avatar_inicio': {
+            hex: 'hex_avatar_inicio',
+            apply: (color) => updateGradient('preview-avatar', color, null)
+        },
+        'grad_avatar_fin': {
+            hex: 'hex_avatar_fin',
+            apply: (color) => {
+                const start = document.getElementById('grad_avatar_inicio')?.value || '#912A5C';
+                updateGradient('preview-avatar', start, color);
+            }
+        }
+    };
+
+    function updateGradient(elementId, startColor, endColor) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Obtener el color final del input correspondiente si no se pasa
+        let end = endColor;
+        if (!end) {
+            if (elementId === 'preview-banner') {
+                end = document.getElementById('grad_banner_fin')?.value || '#FFD700';
+            } else if (elementId === 'preview-avatar') {
+                end = document.getElementById('grad_avatar_fin')?.value || '#FA8F3E';
+            }
+        }
+
+        element.style.background = `linear-gradient(135deg, ${startColor}, ${end})`;
+    }
+
+    // Inicializar todos los color pickers
+    Object.keys(colorInputs).forEach(inputId => {
+        const input = document.getElementById(inputId === 'color_acento' ? 'color_acento' :
+                        inputId === 'grad_banner_inicio' ? 'grad_banner_inicio' :
+                        inputId === 'grad_banner_fin' ? 'grad_banner_fin' :
+                        inputId === 'grad_avatar_inicio' ? 'grad_avatar_inicio' : 'grad_avatar_fin');
+        const hexDisplay = document.getElementById(colorInputs[inputId].hex);
+
+        if (input && hexDisplay) {
+            // Actualizar hex al cambiar
+            input.addEventListener('input', function() {
+                hexDisplay.textContent = this.value.toUpperCase();
+                colorInputs[inputId].apply(this.value);
+            });
+
+            // Aplicar color inicial
+            colorInputs[inputId].apply(input.value);
+        }
+    });
+
+    // Color primario legacy (si existe)
+    const colorPrimario = document.getElementById('color_primario');
+    const hexPrimario = document.getElementById('color_hex_display');
+    if (colorPrimario && hexPrimario) {
+        colorPrimario.addEventListener('input', function() {
+            hexPrimario.textContent = this.value.toUpperCase();
+        });
+    }
+});
 </script>
 
 {% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block titulo %}Empleados — {{ current_user.negocio.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="empleados-container">
+    <div class="empleados-header">
+        <div class="empleados-header-info">
+            <h1>Gestión de Empleados</h1>
+            <p>Administra los usuarios que pueden acceder a tu negocio.</p>
+        </div>
+        {% if puede_agregar %}
+        <a href="{{ url_for('nuevo_empleado') }}" class="btn btn-primary">
+            + Nuevo empleado
+        </a>
+        {% else %}
+        <div class="empleados-limit-badge">
+            <span>Limite alcanzado ({{ cantidad_actual }}/{{ limite }})</span>
+            <a href="{{ url_for('upgrade') }}" class="btn-upgrade-small">Mejorar plan</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="empleados-stats">
+        <div class="empleado-stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ cantidad_actual }}</span>
+                <span class="stat-label">de {{ limite }} usuarios</span>
+            </div>
+        </div>
+        <div class="empleado-stat-card">
+            <div class="stat-icon">👑</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ empleados|selectattr('role', 'equalto', 'admin')|list|length }}</span>
+                <span class="stat-label">Administradores</span>
+            </div>
+        </div>
+        <div class="empleado-stat-card">
+            <div class="stat-icon">👤</div>
+            <div class="stat-info">
+                <span class="stat-value">{{ empleados|selectattr('role', 'equalto', 'staff')|list|length }}</span>
+                <span class="stat-label">Empleados</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="empleados-table-wrap">
+        <table class="empleados-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in empleados %}
+                <tr class="empleado-row {% if not emp.is_active %}empleado-inactive{% endif %}">
+                    <td>
+                        <div class="empleado-nombre">
+                            {% if emp.nombre %}
+                            {{ emp.nombre }}
+                            {% else %}
+                            <span class="sin-nombre">Sin nombre</span>
+                            {% endif %}
+                            {% if emp.id == current_user.id %}
+                            <span class="empleado-badge-you">(Tú)</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ emp.email }}</td>
+                    <td>
+                        <span class="empleado-role-badge empleado-role-{{ emp.role }}">
+                            {% if emp.role == 'admin' %}👑 Admin{% else %}👤 Empleado{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="empleado-status-badge empleado-status-{{ 'active' if emp.is_active else 'inactive' }}">
+                            {% if emp.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="empleado-actions">
+                            {% if emp.id != current_user.id %}
+                            <a href="{{ url_for('editar_empleado', empleado_id=emp.id) }}"
+                               class="empleado-action-btn editar" title="Editar">
+                                ✏️
+                            </a>
+                            <button onclick="toggleEmpleado({{ emp.id }})"
+                                    class="empleado-action-btn {{ 'desactivar' if emp.is_active else 'activar' }}"
+                                    title="{{ 'Desactivar' if emp.is_active else 'Activar' }}">
+                                {% if emp.is_active %}🔒{% else %}🔓{% endif %}
+                            </button>
+                            <button onclick="confirmarEliminacion({{ emp.id }}, '{{ emp.email }}')"
+                                    class="empleado-action-btn eliminar" title="Eliminar">
+                                🗑️
+                            </button>
+                            {% else %}
+                            <span class="empleado-action-own">Tu cuenta</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if plan_actual in ['pro', 'elite'] %}
+    <div class="empleados-audit-link">
+        <a href="{{ url_for('ver_auditoria') }}" class="btn">
+            📋 Ver historial de actividad
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de confirmación -->
+<div class="empleado-modal-overlay" id="modal-confirmar" style="display: none;">
+    <div class="empleado-modal">
+        <h3>¿Eliminar empleado?</h3>
+        <p>Se eliminará permanentemente a <strong id="empleado-email-del"></strong>.</p>
+        <p class="modal-warning">Esta acción no se puede deshacer.</p>
+        <div class="empleado-modal-actions">
+            <button onclick="cerrarModal()" class="btn">Cancelar</button>
+            <form id="form-eliminar" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+function toggleEmpleado(id) {
+    fetch(`/empleados/${id}/desactivar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function confirmarEliminacion(id, email) {
+    document.getElementById('empleado-email-del').textContent = email;
+    document.getElementById('form-eliminar').action = `/empleados/${id}/eliminar`;
+    document.getElementById('modal-confirmar').style.display = 'flex';
+}
+
+function cerrarModal() {
+    document.getElementById('modal-confirmar').style.display = 'none';
+}
+</script>
+{% endblock %}

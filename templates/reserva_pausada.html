@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% set is_owner = false %}
+{% block body_class %}sin-navbar{% endblock %}
+
+{% block titulo %}{{ negocio.nombre }} — Servicio No Disponible{% endblock %}
+
+{% block contenido %}
+
+<div class="reserva-pausada-wrap">
+    <div class="reserva-pausada-card">
+        <div class="reserva-pausada-icon">📅</div>
+
+        <h1 class="reserva-pausada-titulo">Servicio Temporalmente No Disponible</h1>
+
+        <p class="reserva-pausada-texto">
+            Lo sentimos, <strong>{{ negocio.nombre }}</strong> no está disponible temporalmente para recibir reservas.
+            Por favor, intenta nuevamente más tarde o contacta directamente al negocio.
+        </p>
+
+        {% if negocio.telefono %}
+        <div style="margin-top: 1.5rem;">
+            <a href="tel:{{ negocio.telefono }}" class="btn btn-primary" style="text-decoration: none;">
+                📞 Llamar al {{ negocio.telefono }}
+            </a>
+        </div>
+        {% endif %}
+
+        {% if negocio.direccion %}
+        <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+            📍 {{ negocio.direccion }}
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

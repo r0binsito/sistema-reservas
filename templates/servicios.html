@@ -2,6 +2,10 @@
 
 {% block titulo %}Servicios — Reserfy{% endblock %}
 
+{% set es_starter = plan_actual == 'starter' %}
+{% set es_pro = plan_actual == 'pro' %}
+{% set es_elite = plan_actual == 'elite' %}
+
 {% block contenido %}
 <div class="servicios-container">
     <div class="servicios-header">
@@ -44,10 +48,23 @@
                 {% endfor %}
             {% endif %}
 
-            <div class="servicio-card-empty create-card" onclick="openCreateModal()">
-                <div class="empty-icon">+</div>
-                <span class="empty-title">Añadir otro servicio</span>
-            </div>
+            {% if negocio.plan == 'starter' and servicios|length >= 3 %}
+                <div class="servicio-card-empty" style="border: 2px dashed #e74c3c; cursor: default; background: rgba(231, 76, 60, 0.03);">
+                    <div class="empty-icon" style="color: #e74c3c; background: rgba(231, 76, 60, 0.1);">🔒</div>
+                    <span class="empty-title" style="color: #e74c3c; font-weight: bold;">Límite alcanzado</span>
+                    <p style="font-size: 0.8rem; color: #64748b; text-align: center; margin: 5px 10px 15px 10px;">
+                        Has alcanzado el límite de 3 servicios en el plan Starter.
+                    </p>
+                    <a href="{{ url_for('upgrade') }}" style="display: inline-block; background: #2ecc71; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.2); transition: transform 0.2s;">
+                        🚀 Hacer Upgrade
+                    </a>
+                </div>
+            {% else %}
+                <div class="servicio-card-empty create-card" onclick="openCreateModal()">
+                    <div class="empty-icon">+</div>
+                    <span class="empty-title">Añadir otro servicio</span>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -64,7 +81,7 @@
             </button>
         </div>
         <div class="servicios-modal-body">
-            <form id="servicioForm">
+            <form id="servicioForm" method="POST" action="{{ url_for('nuevo_servicio') }}">
                 <input type="hidden" id="servicioId" name="servicio_id">
                 <div class="servicio-form-group">
                     <label class="servicio-form-label">Nombre del Servicio</label>

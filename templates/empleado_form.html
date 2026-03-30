@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block titulo %}{% if empleado %}Editar Empleado{% else %}Nuevo Empleado{% endif %} — {{ current_user.negocio.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="empleado-form-container">
+    <div class="empleado-form-header">
+        <a href="{{ url_for('ver_empleados') }}" class="back-link">← Volver a empleados</a>
+        <h1>{% if empleado %}Editar Empleado{% else %}Nuevo Empleado{% endif %}</h1>
+        <p>{% if empleado %}Modifica los datos del empleado{% else %}Añade un nuevo miembro a tu equipo{% endif %}</p>
+    </div>
+
+    <form method="POST" class="empleado-form">
+        <div class="form-section">
+            <h3 class="form-section-title">Información personal</h3>
+
+            <div class="form-group">
+                <label for="nombre">Nombre completo</label>
+                <input type="text" id="nombre" name="nombre"
+                       value="{{ empleado.nombre if empleado else '' }}"
+                       placeholder="Ej: Juan Pérez">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono"
+                       value="{{ empleado.telefono if empleado else '' }}"
+                       placeholder="Ej: 809-555-1234">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required
+                       value="{{ empleado.email if empleado else '' }}"
+                       placeholder="correo@ejemplo.com"
+                       {% if empleado %}readonly{% endif %}>
+                {% if empleado %}
+                <small>El email no se puede cambiar</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3 class="form-section-title">Acceso</h3>
+
+            {% if not empleado or empleado.id != current_user.id %}
+            <div class="form-group">
+                <label for="role">Rol *</label>
+                <select id="role" name="role">
+                    <option value="staff" {% if empleado and empleado.role == 'staff' %}selected{% endif %}>
+                        👤 Empleado — Puede gestionar reservas y clientes
+                    </option>
+                    <option value="admin" {% if empleado and empleado.role == 'admin' %}selected{% endif %}>
+                        👑 Administrador — Acceso total al negocio
+                    </option>
+                </select>
+                <small>Los administradores pueden gestionar empleados, ver auditoría y cambiar configuración.</small>
+            </div>
+            {% else %}
+            <div class="form-group">
+                <label>Rol</label>
+                <input type="hidden" name="role" value="admin">
+                <div class="role-display">
+                    <span class="empleado-role-badge empleado-role-admin">👑 Administrador</span>
+                    <small>No puedes cambiar tu propio rol</small>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not empleado %}
+            <div class="form-group">
+                <label for="password">Contraseña inicial *</label>
+                <input type="password" id="password" name="password" required
+                       placeholder="Mínimo 6 caracteres" minlength="6">
+                <small>El empleado podrá cambiarla después</small>
+            </div>
+            {% else %}
+            <div class="form-group">
+                <label for="nueva_password">Nueva contraseña</label>
+                <input type="password" id="nueva_password" name="nueva_password"
+                       placeholder="Dejar vacío para mantener la actual" minlength="6">
+                <small>Dejar vacío para mantener la contraseña actual</small>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('ver_empleados') }}" class="btn">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                {% if empleado %}Guardar cambios{% else %}Crear empleado{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if empleado and empleado.id != current_user.id %}
+<div class="danger-zone">
+    <h3>Zona de peligro</h3>
+    <p>Desactivar o eliminar este empleado revocará su acceso inmediatamente.</p>
+    <div class="danger-actions">
+        <button onclick="toggleEmpleado()" class="btn btn-danger">
+            {% if empleado.is_active %}Desactivar empleado{% else %}Activar empleado{% endif %}
+        </button>
+    </div>
+</div>
+
+<script>
+function toggleEmpleado() {
+    if (confirm('¿Estás seguro de que quieres {% if empleado.is_active %}desactivar{% else %}activar{% endif %} este empleado?')) {
+        fetch(`/empleados/{{ empleado.id }}/desactivar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        });
+    }
+}
+</script>
+{% endif %}
+
+{% endblock %}

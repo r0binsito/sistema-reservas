@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block titulo %}Historial de Actividad — {{ current_user.negocio.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="auditoria-container">
+    <div class="auditoria-header">
+        <div class="auditoria-header-info">
+            <h1>📋 Historial de Actividad</h1>
+            <p>Registro de todas las acciones realizadas en tu negocio.</p>
+        </div>
+        <a href="{{ url_for('ver_empleados') }}" class="btn">← Volver a empleados</a>
+    </div>
+
+    <div class="auditoria-filters">
+        <form method="GET" class="filter-form">
+            <select name="action" onchange="this.form.submit()">
+                <option value="">Todas las acciones</option>
+                <optgroup label="Usuarios">
+                    <option value="{{ AuditAction.USUARIO_CREADO }}" {% if action_filter == AuditAction.USUARIO_CREADO %}selected{% endif %}>
+                        Usuario creado
+                    </option>
+                    <option value="{{ AuditAction.USUARIO_EDITADO }}" {% if action_filter == AuditAction.USUARIO_EDITADO %}selected{% endif %}>
+                        Usuario editado
+                    </option>
+                    <option value="{{ AuditAction.USUARIO_DESACTIVADO }}" {% if action_filter == AuditAction.USUARIO_DESACTIVADO %}selected{% endif %}>
+                        Usuario desactivado
+                    </option>
+                    <option value="{{ AuditAction.USUARIO_ACTIVADO }}" {% if action_filter == AuditAction.USUARIO_ACTIVADO %}selected{% endif %}>
+                        Usuario activado
+                    </option>
+                </optgroup>
+                <optgroup label="Reservas">
+                    <option value="{{ AuditAction.RESERVA_CREADA }}" {% if action_filter == AuditAction.RESERVA_CREADA %}selected{% endif %}>
+                        Reserva creada
+                    </option>
+                    <option value="{{ AuditAction.RESERVA_CANCELADA }}" {% if action_filter == AuditAction.RESERVA_CANCELADA %}selected{% endif %}>
+                        Reserva cancelada
+                    </option>
+                </optgroup>
+                <optgroup label="Clientes">
+                    <option value="{{ AuditAction.CLIENTE_CREADO }}" {% if action_filter == AuditAction.CLIENTE_CREADO %}selected{% endif %}>
+                        Cliente creado
+                    </option>
+                    <option value="{{ AuditAction.CLIENTE_EDITADO }}" {% if action_filter == AuditAction.CLIENTE_EDITADO %}selected{% endif %}>
+                        Cliente editado
+                    </option>
+                </optgroup>
+                <optgroup label="Seguridad">
+                    <option value="{{ AuditAction.LOGIN_EXITOSO }}" {% if action_filter == AuditAction.LOGIN_EXITOSO %}selected{% endif %}>
+                        Login exitoso
+                    </option>
+                    <option value="{{ AuditAction.LOGIN_FALLIDO }}" {% if action_filter == AuditAction.LOGIN_FALLIDO %}selected{% endif %}>
+                        Login fallido
+                    </option>
+                </optgroup>
+            </select>
+        </form>
+    </div>
+
+    {% if logs.items %}
+    <div class="auditoria-table-wrap">
+        <table class="auditoria-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Detalles</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs.items %}
+                <tr class="auditoria-row auditoria-{{ log.action|lower }}">
+                    <td class="auditoria-fecha">
+                        <div class="fecha">{{ log.timestamp.strftime('%d/%m/%Y') }}</div>
+                        <div class="hora">{{ log.timestamp.strftime('%H:%M') }}</div>
+                    </td>
+                    <td class="auditoria-usuario">
+                        {% if log.user %}
+                            {{ log.user.email }}
+                        {% else %}
+                            <span class="sin-usuario">Sistema</span>
+                        {% endif %}
+                    </td>
+                    <td class="auditoria-accion">
+                        <span class="accion-badge accion-{{ log.action|lower }}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="auditoria-descripcion">
+                        {{ log.description or '—' }}
+                    </td>
+                    <td class="auditoria-ip">
+                        {{ log.ip_address or '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if logs.pages > 1 %}
+    <div class="auditoria-pagination">
+        {% if logs.has_prev %}
+        <a href="{{ url_for('ver_auditoria', page=logs.prev_num, action=action_filter) }}" class="btn">← Anterior</a>
+        {% endif %}
+
+        <span class="pagination-info">Página {{ logs.page }} de {{ logs.pages }}</span>
+
+        {% if logs.has_next %}
+        <a href="{{ url_for('ver_auditoria', page=logs.next_num, action=action_filter) }}" class="btn btn-primary">Siguiente →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="auditoria-empty">
+        <div class="empty-icon">📭</div>
+        <h3>Sin actividad registrada</h3>
+        <p>Aún no hay acciones registradas en el historial.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

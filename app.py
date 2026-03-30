@@ -20,7 +20,9 @@ from flask_dance.consumer import oauth_authorized, oauth_error
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
 
-from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio
+from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio, AuditLog, UserRole, AuditAction
+from decorators import requires_role, requires_admin, requires_plan, requires_active_plan, log_audit, can_user_manage_users, check_user_limit
+from utils.subscription import plan_activo, dias_restantes_plan, formatear_tiempo_restante, estado_plan
 
 load_dotenv()
 
@@ -103,30 +105,57 @@ def inject_plan_info():
             ).count(),
             "clientes": Cliente.query.filter_by(negocio_id=negocio.id).count(),
             "servicios": Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count(),
+            "usuarios": Usuario.query.filter_by(negocio_id=negocio.id).count(),
         }
 
-        trial_expirado = False
-        dias_restantes = None
-        if plan == "trial" and negocio.trial_expira:
-            delta = negocio.trial_expira.replace(tzinfo=None) - datetime.now(timezone.utc).replace(tzinfo=None)
-            if delta.days < 0:
-                trial_expirado = True
-            else:
-                dias_restantes = delta.days
+        # Información de suscripción usando las nuevas utilidades
+        plan_vigente = plan_activo(negocio)
+        dias_plan = dias_restantes_plan(negocio)
+        estado_plan_str = estado_plan(negocio)
+
+        # Colores personalizados para Elite
+        colores_marca = None
+        if plan == "elite":
+            colores_marca = {
+                'color_acento': negocio.color_acento or '#FA8F3E',
+                'gradiente_banner_inicio': negocio.gradiente_banner_inicio or '#912A5C',
+                'gradiente_banner_fin': negocio.gradiente_banner_fin or '#FFD700',
+                'gradiente_avatar_inicio': negocio.gradiente_avatar_inicio or '#912A5C',
+                'gradiente_avatar_fin': negocio.gradiente_avatar_fin or '#FA8F3E',
+            }
+
+        # Información de branding/marca de agua
+        branding_info = {
+            'mostrar_marca_reserfy': limites.get('marca_agua', True) if limites else True,
+            'marca_personalizada': negocio.marca_agua_personalizada if plan == 'elite' and negocio.marca_agua_personalizada else None,
+            'es_elite': plan == 'elite',
+        }
 
         return dict(
             plan_actual=plan,
             plan_limites=limites,
             plan_uso=uso,
-            trial_expirado=trial_expirado,
-            dias_restantes=dias_restantes
+            trial_expirado=not plan_vigente,  # Mantener compatibilidad
+            dias_restantes=dias_plan,
+            plan_estado=estado_plan_str,
+            plan_vencimiento=negocio.plan_vence,
+            plan_frecuencia=negocio.plan_frecuencia,
+            colores_marca=colores_marca,
+            color_primario=colores_marca['color_acento'] if colores_marca else None,
+            branding_info=branding_info
         )
     return dict(
         plan_actual=None,
         plan_limites=None,
         plan_uso=None,
         trial_expirado=False,
-        dias_restantes=None
+        dias_restantes=None,
+        plan_estado=None,
+        plan_vencimiento=None,
+        plan_frecuencia=None,
+        colores_marca=None,
+        color_primario=None,
+        branding_info={'mostrar_marca_reserfy': True, 'marca_personalizada': None, 'es_elite': False}
     )
 
 
@@ -309,13 +338,17 @@ LIMITES_PLAN = {
         "servicios": 999,
         "estadisticas": True,
         "marca_agua": False,
+        "usuarios": 1,  # Solo el usuario principal
+        "busqueda_predictiva": True,
     },
     "starter": {
-        "reservas_mes": 50,
-        "clientes": 30,
+        "reservas_mes": 30,      # Nerfeado de 50 a 30
+        "clientes": 20,          # Nerfeado de 30 a 20
         "servicios": 3,
         "estadisticas": False,
         "marca_agua": True,
+        "usuarios": 1,           # Sin usuarios adicionales
+        "busqueda_predictiva": False,  # Solo búsqueda estándar
     },
     "pro": {
         "reservas_mes": 999,
@@ -323,13 +356,18 @@ LIMITES_PLAN = {
         "servicios": 999,
         "estadisticas": True,
         "marca_agua": True,
+        "usuarios": 3,           # Hasta 3 usuarios
+        "busqueda_predictiva": True,
     },
     "elite": {
         "reservas_mes": 999,
         "clientes": 999,
         "servicios": 999,
         "estadisticas": True,
-        "marca_agua": False,
+        "marca_agua": False,     # Sin marca de agua
+        "usuarios": 5,           # Hasta 5 usuarios
+        "busqueda_predictiva": True,
+        "color_personalizado": True,
     },
 }
 
@@ -369,6 +407,11 @@ def verificar_limite(negocio, tipo):
         count = Servicio.query.filter_by(negocio_id=negocio.id, activo=True).count()
         return count < limites["servicios"], count
 
+    if tipo == "usuarios":
+        count = Usuario.query.filter_by(negocio_id=negocio.id).count()
+        max_usuarios = limites.get("usuarios", 1)
+        return count < max_usuarios, count
+
     return True, 0
 
 # --- Index ---
@@ -398,10 +441,22 @@ def registro():
         usuario = Usuario(
             email=email,
             password_hash=generate_password_hash(password),
-            negocio_id=negocio.id
+            negocio_id=negocio.id,
+            role=UserRole.ADMIN,  # El primer usuario es admin
+            is_active=True
         )
         db.session.add(usuario)
         db.session.commit()
+
+        # Registrar en auditoría
+        log_audit(
+            action=AuditAction.USUARIO_CREADO,
+            entity_type='usuario',
+            entity_id=usuario.id,
+            description=f"Usuario admin creado: {email}",
+            user=usuario,
+            negocio=negocio
+        )
 
         login_user(usuario)
         return redirect(url_for("elegir_plan"))
@@ -431,8 +486,29 @@ def login():
         usuario = Usuario.query.filter_by(email=email).first()
 
         if usuario and check_password_hash(usuario.password_hash, password):
+            # Verificar si el usuario está activo
+            if not usuario.is_active:
+                return render_template("login.html", error="Tu cuenta está desactivada. Contacta al administrador.")
+
             login_user(usuario)
+
+            # Registrar login exitoso en auditoría
+            log_audit(
+                action=AuditAction.LOGIN_EXITOSO,
+                entity_type='usuario',
+                entity_id=usuario.id,
+                description=f"Inicio de sesión exitoso: {email}",
+                user=usuario
+            )
+
             return redirect(url_for("dashboard"))
+
+        # Registrar intento fallido
+        log_audit(
+            action=AuditAction.LOGIN_FALLIDO,
+            entity_type='usuario',
+            description=f"Intento de login fallido: {email}"
+        )
 
         return render_template("login.html", error="Email o contraseña incorrectos")
 
@@ -601,6 +677,7 @@ def google_authorized(blueprint, token):
 # --- Dashboard protegido ---
 @app.route("/dashboard")
 @login_required
+@requires_active_plan
 def dashboard():
     negocio = current_user.negocio
 
@@ -624,6 +701,7 @@ def dashboard():
 # --- Ver clientes SOLO del negocio actual ---
 @app.route("/clientes")
 @login_required
+@requires_active_plan
 def ver_clientes():
     clientes = Cliente.query.filter_by(
         negocio_id=current_user.negocio_id
@@ -669,6 +747,7 @@ def api_buscar_clientes():
 
 @app.route("/clientes/nuevo", methods=["GET", "POST"])
 @login_required
+@requires_active_plan
 def nuevo_cliente():
     negocio = current_user.negocio
     puede, count = verificar_limite(negocio, "clientes")
@@ -691,18 +770,23 @@ def nuevo_cliente():
         return redirect(url_for("ver_clientes"))
     return render_template("nuevo_cliente.html")
 
-@app.route("/servicios/nuevo", methods=["GET", "POST"])
+@app.route("/servicios/nuevo", methods=["POST"])
 @login_required
+@requires_active_plan
 def nuevo_servicio():
     negocio = current_user.negocio
+    
+    # 1. Tu excelente verificación de límites (se queda intacta)
     puede, count = verificar_limite(negocio, "servicios")
     if not puede:
         if count == "trial_expirado":
             return redirect(url_for("upgrade"))
+            
         from flask import flash
         flash(f"Alcanzaste el límite de servicios de tu plan ({LIMITES_PLAN[negocio.plan]['servicios']}). Actualiza tu plan.", "error")
         return redirect(url_for("upgrade"))
 
+    # 2. Procesamos el POST del formulario del Modal
     if request.method == "POST":
         servicio = Servicio(
             nombre=request.form["nombre"],
@@ -713,21 +797,37 @@ def nuevo_servicio():
         db.session.add(servicio)
         db.session.commit()
 
-        # Verificar si onboarding completado (horario + al menos un servicio activo)
+        # 3. Verificar si onboarding completado (horario + al menos un servicio activo)
         tiene_horarios = Horario.query.filter_by(negocio_id=current_user.negocio_id).count() > 0
         tiene_servicios = Servicio.query.filter_by(negocio_id=current_user.negocio_id, activo=True).count() > 0
 
         if tiene_horarios and tiene_servicios:
             session['onboarding_just_completed'] = True
 
+        # Redirige de vuelta a la lista de servicios donde el modal fue cerrado
         return redirect(url_for("ver_servicios"))
-    return render_template("nuevo_servicio.html")
+        
+    # Nota: He quitado el render_template("nuevo_servicio.html") porque creas el servicio
+    # desde la misma interfaz de servicios.html con el modal.
 
 @app.route("/upgrade")
 @login_required
 def upgrade():
     negocio = current_user.negocio
     return render_template("upgrade.html", negocio=negocio)
+
+
+@app.route("/suscripcion-vencida")
+@login_required
+def suscripcion_vencida():
+    """Página mostrada cuando el plan ha vencido."""
+    negocio = current_user.negocio
+    return render_template(
+        "suscripcion_vencida.html",
+        plan_actual=negocio.plan,
+        plan_vence=negocio.plan_vence
+    )
+
 
 # --- Logout ---
 @app.route("/logout")
@@ -747,6 +847,41 @@ def perfil_negocio():
         negocio.eslogan = request.form.get("eslogan")
         negocio.telefono = request.form.get("telefono")
         negocio.direccion = request.form.get("direccion")
+
+        # Guardar marca de agua personalizada (solo Elite)
+        if negocio.plan == 'elite':
+            marca = request.form.get("marca_agua_personalizada")
+            if marca and len(marca) <= 200:
+                negocio.marca_agua_personalizada = marca
+
+            # Guardar colores de marca personalizados (solo Elite)
+            def validar_color_hex(color):
+                return color and color.startswith("#") and len(color) == 7
+
+            color_acento = request.form.get("color_acento")
+            if validar_color_hex(color_acento):
+                negocio.color_acento = color_acento
+
+            grad_banner_inicio = request.form.get("gradiente_banner_inicio")
+            if validar_color_hex(grad_banner_inicio):
+                negocio.gradiente_banner_inicio = grad_banner_inicio
+
+            grad_banner_fin = request.form.get("gradiente_banner_fin")
+            if validar_color_hex(grad_banner_fin):
+                negocio.gradiente_banner_fin = grad_banner_fin
+
+            grad_avatar_inicio = request.form.get("gradiente_avatar_inicio")
+            if validar_color_hex(grad_avatar_inicio):
+                negocio.gradiente_avatar_inicio = grad_avatar_inicio
+
+            grad_avatar_fin = request.form.get("gradiente_avatar_fin")
+            if validar_color_hex(grad_avatar_fin):
+                negocio.gradiente_avatar_fin = grad_avatar_fin
+
+            # Legacy: mantener color_primario por compatibilidad
+            color = request.form.get("color_primario")
+            if validar_color_hex(color):
+                negocio.color_primario = color
 
         # Procesar imagen recortada de Cropper.js
         logo_recortado = request.form.get("logo_recortado")
@@ -768,6 +903,225 @@ def perfil_negocio():
         db.session.commit()
         return redirect(url_for("dashboard"))
     return render_template("perfil.html", negocio=negocio)
+
+
+# ===== GESTIÓN DE EMPLEADOS (RBAC) =====
+
+@app.route("/empleados")
+@login_required
+@requires_role('admin')
+def ver_empleados():
+    """Lista todos los empleados del negocio (solo admin)."""
+    negocio = current_user.negocio
+    empleados = Usuario.query.filter_by(negocio_id=negocio.id).order_by(Usuario.role.desc(), Usuario.id).all()
+
+    # Verificar límites de plan
+    puede_agregar, cantidad_actual, limite = check_user_limit(negocio)
+
+    return render_template("empleados.html",
+        empleados=empleados,
+        puede_agregar=puede_agregar,
+        cantidad_actual=cantidad_actual,
+        limite=limite
+    )
+
+
+@app.route("/empleados/nuevo", methods=["GET", "POST"])
+@login_required
+@requires_role('admin')
+def nuevo_empleado():
+    """Crear un nuevo empleado (solo admin)."""
+    negocio = current_user.negocio
+
+    # Verificar límite de usuarios
+    puede_agregar, cantidad_actual, limite = check_user_limit(negocio)
+    if not puede_agregar:
+        flash(f"Has alcanzado el límite de {limite} usuarios de tu plan actual.", "error")
+        return redirect(url_for("ver_empleados"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        nombre = request.form.get("nombre", "").strip()
+        telefono = request.form.get("telefono", "").strip()
+        password = request.form.get("password", "")
+        role = request.form.get("role", UserRole.STAFF)
+
+        # Validaciones
+        if not email or not password:
+            flash("Email y contraseña son obligatorios.", "error")
+            return render_template("empleado_form.html", nombre=nombre, telefono=telefono, email=email)
+
+        # Verificar si ya existe
+        if Usuario.query.filter_by(email=email).first():
+            flash("Ya existe un usuario con ese email.", "error")
+            return render_template("empleado_form.html", nombre=nombre, telefono=telefono, email=email)
+
+        # Crear empleado
+        empleado = Usuario(
+            email=email,
+            password_hash=generate_password_hash(password),
+            nombre=nombre,
+            telefono=telefono,
+            negocio_id=negocio.id,
+            role=role,
+            is_active=True
+        )
+        db.session.add(empleado)
+        db.session.commit()
+
+        # Registrar auditoría
+        log_audit(
+            action=AuditAction.USUARIO_CREADO,
+            entity_type='usuario',
+            entity_id=empleado.id,
+            description=f"Empleado creado: {email} ({role})",
+            user=current_user,
+            negocio=negocio
+        )
+
+        flash(f"Empleado {email} creado correctamente.", "success")
+        return redirect(url_for("ver_empleados"))
+
+    return render_template("empleado_form.html")
+
+
+@app.route("/empleados/<int:empleado_id>/editar", methods=["GET", "POST"])
+@login_required
+@requires_role('admin')
+def editar_empleado(empleado_id):
+    """Editar un empleado existente (solo admin)."""
+    negocio = current_user.negocio
+
+    # Verificar que el empleado pertenece al mismo negocio
+    empleado = Usuario.query.filter_by(id=empleado_id, negocio_id=negocio.id).first_or_404()
+
+    if request.method == "POST":
+        empleado.nombre = request.form.get("nombre", "").strip()
+        empleado.telefono = request.form.get("telefono", "").strip()
+        nuevo_role = request.form.get("role", empleado.role)
+
+        # Solo el admin principal puede cambiar roles
+        # No permitir que se quite su propio rol de admin
+        if empleado.id != current_user.id:
+            empleado.role = nuevo_role
+
+        # Cambiar contraseña si se proporciona
+        nueva_password = request.form.get("nueva_password", "").strip()
+        if nueva_password:
+            empleado.password_hash = generate_password_hash(nueva_password)
+
+        db.session.commit()
+
+        # Registrar auditoría
+        log_audit(
+            action=AuditAction.USUARIO_EDITADO,
+            entity_type='usuario',
+            entity_id=empleado.id,
+            description=f"Empleado editado: {empleado.email}",
+            user=current_user,
+            negocio=negocio
+        )
+
+        flash("Empleado actualizado correctamente.", "success")
+        return redirect(url_for("ver_empleados"))
+
+    return render_template("empleado_form.html", empleado=empleado)
+
+
+@app.route("/empleados/<int:empleado_id>/desactivar", methods=["POST"])
+@login_required
+@requires_role('admin')
+def desactivar_empleado(empleado_id):
+    """Desactivar/Activar un empleado (solo admin)."""
+    negocio = current_user.negocio
+
+    # Verificar que el empleado pertenece al mismo negocio
+    empleado = Usuario.query.filter_by(id=empleado_id, negocio_id=negocio.id).first_or_404()
+
+    # No permitir desactivarse a sí mismo
+    if empleado.id == current_user.id:
+        return jsonify({"success": False, "error": "No puedes desactivar tu propia cuenta."})
+
+    # Toggle estado
+    empleado.is_active = not empleado.is_active
+    db.session.commit()
+
+    # Registrar auditoría
+    accion = AuditAction.USUARIO_ACTIVADO if empleado.is_active else AuditAction.USUARIO_DESACTIVADO
+    log_audit(
+        action=accion,
+        entity_type='usuario',
+        entity_id=empleado.id,
+        description=f"Empleado {'activado' if empleado.is_active else 'desactivado'}: {empleado.email}",
+        user=current_user,
+        negocio=negocio
+    )
+
+    return jsonify({
+        "success": True,
+        "is_active": empleado.is_active,
+        "message": f"Empleado {'activado' if empleado.is_active else 'desactivado'} correctamente."
+    })
+
+
+@app.route("/empleados/<int:empleado_id>/eliminar", methods=["POST"])
+@login_required
+@requires_role('admin')
+def eliminar_empleado(empleado_id):
+    """Eliminar permanentemente un empleado (solo admin)."""
+    negocio = current_user.negocio
+
+    # Verificar que el empleado pertenece al mismo negocio
+    empleado = Usuario.query.filter_by(id=empleado_id, negocio_id=negocio.id).first_or_404()
+
+    # No permitirse eliminarse a sí mismo
+    if empleado.id == current_user.id:
+        return jsonify({"success": False, "error": "No puedes eliminar tu propia cuenta."})
+
+    email = empleado.email
+
+    # Registrar auditoría antes de eliminar
+    log_audit(
+        action=AuditAction.USUARIO_DESACTIVADO,
+        entity_type='usuario',
+        entity_id=empleado.id,
+        description=f"Empleado eliminado: {email}",
+        user=current_user,
+        negocio=negocio
+    )
+
+    db.session.delete(empleado)
+    db.session.commit()
+
+    flash(f"Empleado {email} eliminado correctamente.", "success")
+    return redirect(url_for("ver_empleados"))
+
+
+@app.route("/auditoria")
+@login_required
+@requires_role('admin')
+def ver_auditoria():
+    """Ver historial de auditoría (solo admin)."""
+    negocio = current_user.negocio
+
+    # Filtros opcionales
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    action_filter = request.args.get('action', '')
+
+    # Query base
+    query = AuditLog.query.filter_by(negocio_id=negocio.id)
+
+    if action_filter:
+        query = query.filter(AuditLog.action == action_filter)
+
+    logs = query.order_by(AuditLog.timestamp.desc()).paginate(page=page, per_page=per_page)
+
+    return render_template("auditoria.html",
+        logs=logs,
+        action_filter=action_filter,
+        AuditAction=AuditAction
+    )
 
 # --- API Routes for Services (AJAX) ---
 @app.route("/api/servicios/<int:id>", methods=["GET"])
@@ -871,7 +1225,7 @@ def ver_servicios():
     servicios = Servicio.query.filter_by(
         negocio_id=current_user.negocio_id
     ).all()
-    return render_template("servicios.html", servicios=servicios)
+    return render_template("servicios.html", servicios=servicios, negocio=current_user.negocio)
 
 # --- Editar servicio ---
 @app.route("/servicios/editar/<int:servicio_id>", methods=["GET", "POST"])
@@ -1199,6 +1553,11 @@ def slots_disponibles(slug):
 @app.route("/b/<slug>", methods=["GET", "POST"])
 def reserva_publica(slug):
     negocio = Negocio.query.filter_by(slug=slug).first_or_404()
+
+    # Verificar si el plan está activo
+    if not plan_activo(negocio):
+        return render_template("reserva_pausada.html", negocio=negocio)
+
     mensaje = ""
     slots = []
     fecha_seleccionada = None
@@ -1224,6 +1583,16 @@ def reserva_publica(slug):
             puede, count = verificar_limite(negocio, "reservas_mes")
             if not puede:
                 mensaje = "Este negocio ha alcanzado su límite de reservas por este mes. Intenta más tarde."
+                # Colores de marca para Elite
+                colores_marca = None
+                if negocio.plan == 'elite':
+                    colores_marca = {
+                        'color_acento': negocio.color_acento or '#FA8F3E',
+                        'gradiente_banner_inicio': negocio.gradiente_banner_inicio or '#912A5C',
+                        'gradiente_banner_fin': negocio.gradiente_banner_fin or '#FFD700',
+                        'gradiente_avatar_inicio': negocio.gradiente_avatar_inicio or '#912A5C',
+                        'gradiente_avatar_fin': negocio.gradiente_avatar_fin or '#FA8F3E',
+                    }
                 return render_template(
                 "reserva_publica.html",
                 negocio=negocio,
@@ -1232,7 +1601,8 @@ def reserva_publica(slug):
                 fecha_seleccionada=fecha_seleccionada,
                 servicio_seleccionado=servicio_seleccionado,
                 servicios=servicios,
-                now=datetime.now()
+                now=datetime.now(),
+                colores_marca=colores_marca
             )
             fecha_hora_utc = datetime.strptime(hora_str, "%Y-%m-%d %H:%M:%S")
 
@@ -1285,6 +1655,17 @@ def reserva_publica(slug):
         except ValueError:
             mensaje = "Error: formato de hora inválido. Intenta de nuevo."
 
+    # Colores de marca personalizados para Elite
+    colores_marca = None
+    if negocio.plan == 'elite':
+        colores_marca = {
+            'color_acento': negocio.color_acento or '#FA8F3E',
+            'gradiente_banner_inicio': negocio.gradiente_banner_inicio or '#912A5C',
+            'gradiente_banner_fin': negocio.gradiente_banner_fin or '#FFD700',
+            'gradiente_avatar_inicio': negocio.gradiente_avatar_inicio or '#912A5C',
+            'gradiente_avatar_fin': negocio.gradiente_avatar_fin or '#FA8F3E',
+        }
+
     return render_template(
     "reserva_publica.html",
     negocio=negocio,
@@ -1293,7 +1674,8 @@ def reserva_publica(slug):
     fecha_seleccionada=fecha_seleccionada,
     servicio_seleccionado=servicio_seleccionado,
     servicios=servicios,
-    now=datetime.now()
+    now=datetime.now(),
+    colores_marca=colores_marca
 )
             
 # Auto-cancelar reservas después de 4 horas
@@ -1317,6 +1699,7 @@ scheduler.start()
 # Ver reservas pendientes
 @app.route("/reservas")
 @login_required
+@requires_active_plan
 def ver_reservas():
     reservas = Reserva.query.filter_by(
         negocio_id=current_user.negocio_id

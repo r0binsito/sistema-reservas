@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block titulo %}Suscripción Vencida — Reserfy{% endblock %}
+
+{% block contenido %}
+
+<div class="suscripcion-vencida-wrap">
+    <div class="suscripcion-vencida-card">
+        <div class="suscripcion-vencida-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+
+        <h1 class="suscripcion-vencida-titulo">Suscripción Vencida</h1>
+
+        <p class="suscripcion-vencida-texto">
+            Tu plan <strong>{{ plan_actual | upper }}</strong> ha vencido.
+            Para continuar usando Reserfy, necesitas renovar tu suscripción.
+        </p>
+
+        <div class="suscripcion-vencida-info">
+            <div class="suscripcion-info-item">
+                <span class="suscripcion-info-label">Plan anterior</span>
+                <span class="suscripcion-info-valor">{{ plan_actual | upper }}</span>
+            </div>
+            <div class="suscripcion-info-item">
+                <span class="suscripcion-info-label">Venció el</span>
+                <span class="suscripcion-info-valor">
+                    {% if plan_vence %}
+                        {{ plan_vence.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="suscripcion-vencida-acciones">
+            <a href="{{ url_for('elegir_plan') }}" class="btn btn-primary btn-grande">
+                Ver planes disponibles →
+            </a>
+            <a href="{{ url_for('logout') }}" class="btn">
+                Cerrar sesión
+            </a>
+        </div>
+
+        <div class="suscripcion-vencida-ayuda">
+            <p>¿Necesitas ayuda? Contacta a <a href="mailto:soporte@reserfy.com">soporte@reserfy.com</a></p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

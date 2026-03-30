@@ -27,6 +27,33 @@
 
 <div class="dashboard-wrapper">
 
+    {# === BANNER DE PLAN === #}
+    {% if plan_estado == 'vencido' %}
+    <div class="banner-plan banner-plan-expired">
+        <div class="banner-plan-text">
+            <span class="banner-plan-icon">⚠️</span>
+            <span>Tu plan <strong>{{ plan_actual | upper }}</strong> ha vencido. Renueva para continuar.</span>
+        </div>
+        <a href="{{ url_for('upgrade') }}" class="banner-plan-btn">Renovar plan →</a>
+    </div>
+    {% elif plan_estado == 'proximo_vencer' %}
+    <div class="banner-plan banner-plan-warning">
+        <div class="banner-plan-text">
+            <span class="banner-plan-icon">⏰</span>
+            <span>Tu plan <strong>{{ plan_actual | upper }}</strong> vence en <strong>{{ dias_restantes }} días</strong>.</span>
+        </div>
+        <a href="{{ url_for('upgrade') }}" class="banner-plan-btn">Renovar →</a>
+    </div>
+    {% elif plan_estado == 'activo' and dias_restantes and dias_restantes <= 30 and plan_actual != 'trial' %}
+    <div class="banner-plan banner-plan-info">
+        <div class="banner-plan-text">
+            <span class="banner-plan-icon">📅</span>
+            <span>Tu plan <strong>{{ plan_actual | upper }}</strong> {{ plan_frecuencia or 'mensual' }} vence el <strong>{{ plan_vencimiento.strftime('%d/%m/%Y') }}</strong>.</span>
+        </div>
+        <a href="{{ url_for('upgrade') }}" class="banner-plan-btn">Ver planes →</a>
+    </div>
+    {% endif %}
+
     {# === MODAL DE ONBOARDING (BLOQUEANTE) === #}
     {% if not onboarding_completo %}
     <div class="onboarding-modal-overlay" id="onboarding-modal">
@@ -394,13 +421,7 @@
 
 </div>
 
-{# === MARCA DE AGUA (SOLO SI NO ES ELITE) === #}
-{% if not es_elite %}
-<div class="powered-by-reserfy">
-    <span>Powered by</span>
-    <a href="{{ url_for('index') }}" target="_blank">Reserfy</a>
-</div>
-{% endif %}
+{# El watermark ahora se maneja desde base.html #}
 
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 

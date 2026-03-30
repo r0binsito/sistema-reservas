@@ -6,6 +6,8 @@
 
 {% block page_content %}
 
+<input type="hidden" id="plan-actual-usuario" value="{{ negocio.plan or 'trial' }}">
+
 <div class="planes-bg">
     <div class="planes-particle planes-particle-1"></div>
     <div class="planes-particle planes-particle-2"></div>
@@ -47,7 +49,6 @@
 
         <div class="planes-grid planes-grid-3">
 
-            <!-- Starter -->
             <div class="plan-card plan-card-starter {% if negocio.plan == 'starter' %}plan-card-actual{% endif %}">
                 <div class="plan-card-glow plan-card-glow-starter"></div>
                 {% if negocio.plan == 'starter' %}
@@ -59,35 +60,34 @@
                     <p class="plan-descripcion">Para negocios que están comenzando</p>
                     <div class="plan-precio-wrap">
                         <div class="plan-precio">
-                            <span class="plan-moneda">$</span>
-                            <span class="plan-monto" id="starter-precio">9.99</span>
+                            <span class="plan-monto" id="starter-precio" style="color: #2ecc71; font-size: 2.5rem;">GRATIS</span>
                         </div>
-                        <span class="plan-periodo" id="starter-periodo">por mes</span>
-                        <p class="plan-anual-detalle" id="starter-anual"></p>
+                        <span class="plan-periodo" id="starter-periodo">para siempre</span>
+                        <p class="plan-anual-detalle" id="starter-anual" style="display:none;"></p>
                     </div>
                     <ul class="plan-features">
-                        <li class="plan-feature"><span class="plan-check">✓</span>50 reservas por mes</li>
-                        <li class="plan-feature"><span class="plan-check">✓</span>30 clientes</li>
-                        <li class="plan-feature"><span class="plan-check">✓</span>3 servicios</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>30 reservas por mes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Límite de 20 clientes</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>3 servicios configurables</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Búsqueda estándar de clientes</li>
                         <li class="plan-feature"><span class="plan-check">✓</span>Página pública de reservas</li>
-                        <li class="plan-feature"><span class="plan-check">✓</span>Emails automáticos</li>
-                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Estadísticas</li>
+                        <li class="plan-feature"><span class="plan-check">✓</span>Soporte básico por comunidad</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Estadísticas avanzadas</li>
                         <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Soporte prioritario</li>
                         <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Múltiples usuarios</li>
-                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
                         <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
                     </ul>
                     {% if negocio.plan == 'starter' %}
                     <button class="plan-btn plan-btn-starter" disabled>Plan actual</button>
                     {% else %}
-                    <button class="plan-btn plan-btn-starter" onclick="abrirStripe('starter')">
+                    <button class="plan-btn plan-btn-starter" onclick="validarCambioPlan('starter')">
                         Contratar Starter →
                     </button>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Pro -->
             <div class="plan-card plan-card-pro {% if negocio.plan == 'pro' %}plan-card-actual{% endif %}">
                 <div class="plan-card-glow plan-card-glow-pro"></div>
                 {% if negocio.plan == 'pro' %}
@@ -108,28 +108,27 @@
                         <p class="plan-anual-detalle" id="pro-anual"></p>
                     </div>
                     <ul class="plan-features">
-                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Reservas ilimitadas</li>
-                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Clientes ilimitados</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Reservas y Clientes ilimitados</li>
                         <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Servicios ilimitados</li>
-                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Página pública de reservas</li>
-                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Emails automáticos</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Búsqueda predictiva AJAX</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Aislamiento multi-tenant seguro</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Página pública y Emails automáticos</li>
                         <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Estadísticas básicas</li>
                         <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Soporte prioritario</li>
-                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Hasta 3 usuarios</li>
-                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua</li>
-                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización total</li>
+                        <li class="plan-feature plan-feature-pro"><span class="plan-check plan-check-pro">✓</span>Hasta 3 usuarios de acceso</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Sin marca de agua Reserfy</li>
+                        <li class="plan-feature plan-feature-no"><span class="plan-x">✗</span>Personalización de marca total</li>
                     </ul>
                     {% if negocio.plan == 'pro' %}
                     <button class="plan-btn plan-btn-pro" disabled>Plan actual</button>
                     {% else %}
-                    <button class="plan-btn plan-btn-pro" onclick="abrirStripe('pro')">
+                    <button class="plan-btn plan-btn-pro" onclick="validarCambioPlan('pro')">
                         Contratar Pro →
                     </button>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Elite -->
             <div class="plan-card plan-card-elite {% if negocio.plan == 'elite' %}plan-card-actual{% endif %}">
                 <div class="plan-card-glow plan-card-glow-elite"></div>
                 {% if negocio.plan == 'elite' %}
@@ -156,21 +155,21 @@
                         <p class="plan-anual-detalle plan-anual-detalle-elite" id="elite-anual"></p>
                     </div>
                     <ul class="plan-features">
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Reservas ilimitadas</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Clientes ilimitados</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Servicios ilimitados</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Página pública de reservas</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Emails automáticos</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Estadísticas avanzadas</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Todo lo del Plan Pro incluido</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Reportes avanzados del negocio</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Búsqueda predictiva con filtros</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Aislamiento multi-tenant premium</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Página pública sin anuncios</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Estadísticas avanzadas diarias</li>
                         <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Soporte dedicado 24/7</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Hasta 5 usuarios</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Sin marca de agua Reserfy</li>
-                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Personalización total</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Hasta 5 usuarios de acceso</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Sin marca de agua de Reserfy</li>
+                        <li class="plan-feature plan-feature-elite"><span class="plan-check plan-check-elite">✓</span>Personalización de marca total</li>
                     </ul>
                     {% if negocio.plan == 'elite' %}
                     <button class="plan-btn plan-btn-elite" disabled>Plan actual</button>
                     {% else %}
-                    <button class="plan-btn plan-btn-elite" onclick="abrirStripe('elite')">
+                    <button class="plan-btn plan-btn-elite" onclick="validarCambioPlan('elite')">
                         Contratar Elite →
                     </button>
                     {% endif %}
@@ -188,7 +187,6 @@
     </div>
 </div>
 
-<!-- Modal Stripe Coming Soon -->
 <div class="modal-stripe-overlay" id="modal-stripe">
     <div class="modal-stripe-box">
         <div class="modal-stripe-icon">🔒</div>
@@ -199,6 +197,25 @@
             💬 Contactar por WhatsApp
         </a>
         <button onclick="cerrarStripe()" class="modal-stripe-btn-cancelar">Cerrar</button>
+    </div>
+</div>
+
+<div class="modal-stripe-overlay" id="modal-downgrade">
+    <div class="modal-stripe-box" style="border-top: 5px solid #e74c3c;">
+        <div class="modal-stripe-icon" style="color: #e74c3c;">⚠️</div>
+        <h3 class="modal-stripe-titulo">Plan Superior Detectado</h3>
+        <p class="modal-stripe-desc">Tu suscripción actual es superior a la que estás eligiendo.</p>
+        
+        <div style="background: rgba(231, 76, 60, 0.1); color: #e74c3c; padding: 10px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 15px; font-weight: 500;">
+            Ten en cuenta que no hay ningún tipo de reembolso.
+        </div>
+
+        <p class="modal-stripe-desc" style="font-size: 0.95rem;">Si de igual manera quieres bajar de suscripción, por favor comunícate con nosotros.</p>
+        
+        <a href="https://wa.me/18295551234?text=Hola, tengo un plan superior y me gustaría bajarlo." id="modal-downgrade-wa" class="modal-stripe-btn-wa" style="background: #e74c3c;">
+            💬 Solicitar Downgrade
+        </a>
+        <button onclick="cerrarDowngrade()" class="modal-stripe-btn-cancelar">Cerrar</button>
     </div>
 </div>
 

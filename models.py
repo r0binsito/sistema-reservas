@@ -2,8 +2,47 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 import uuid
 from datetime import datetime, timedelta, timezone
+import json
 
 db = SQLAlchemy()
+
+
+# === ROLES DE USUARIO ===
+class UserRole:
+    ADMIN = 'admin'      # Dueño del negocio - acceso total
+    STAFF = 'staff'      # Empleado - acceso limitado (reservas, clientes)
+
+# === TIPOS DE ACCIÓN PARA AUDITORÍA ===
+class AuditAction:
+    # Usuarios
+    USUARIO_CREADO = 'USUARIO_CREADO'
+    USUARIO_EDITADO = 'USUARIO_EDITADO'
+    USUARIO_DESACTIVADO = 'USUARIO_DESACTIVADO'
+    USUARIO_ACTIVADO = 'USUARIO_ACTIVADO'
+
+    # Reservas
+    RESERVA_CREADA = 'RESERVA_CREADA'
+    RESERVA_EDITADA = 'RESERVA_EDITADA'
+    RESERVA_CANCELADA = 'RESERVA_CANCELADA'
+    RESERVA_COMPLETADA = 'RESERVA_COMPLETADA'
+
+    # Clientes
+    CLIENTE_CREADO = 'CLIENTE_CREADO'
+    CLIENTE_EDITADO = 'CLIENTE_EDITADO'
+    CLIENTE_ELIMINADO = 'CLIENTE_ELIMINADO'
+
+    # Servicios
+    SERVICIO_CREADO = 'SERVICIO_CREADO'
+    SERVICIO_EDITADO = 'SERVICIO_EDITADO'
+    SERVICIO_ELIMINADO = 'SERVICIO_ELIMINADO'
+
+    # Negocio
+    NEGOCIO_EDITADO = 'NEGOCIO_EDITADO'
+    PLAN_ACTUALIZADO = 'PLAN_ACTUALIZADO'
+
+    # Auth
+    LOGIN_EXITOSO = 'LOGIN_EXITOSO'
+    LOGIN_FALLIDO = 'LOGIN_FALLIDO'
 
 class Negocio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,7 +57,17 @@ class Negocio(db.Model):
     logo_url = db.Column(db.String(300))
     plan = db.Column(db.String(20), default="trial")
     trial_expira = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc) + timedelta(days=14))
+    # Campos de suscripción
+    plan_frecuencia = db.Column(db.String(20), default="mensual")  # 'mensual', 'anual', 'unico'
+    plan_vence = db.Column(db.DateTime(timezone=True), nullable=True)  # Fecha de vencimiento del plan
     marca_agua_personalizada = db.Column(db.String(200), nullable=True)
+    # Colores personalizados para plan Elite
+    color_primario = db.Column(db.String(7), nullable=True)  # Color principal de botones (legacy)
+    color_acento = db.Column(db.String(7), nullable=True)  # Color de acento: botones, iconos, pasos activos
+    gradiente_banner_inicio = db.Column(db.String(7), nullable=True)  # Color inicial del gradiente del header
+    gradiente_banner_fin = db.Column(db.String(7), nullable=True)  # Color final del gradiente del header
+    gradiente_avatar_inicio = db.Column(db.String(7), nullable=True)  # Color inicial del gradiente del avatar
+    gradiente_avatar_fin = db.Column(db.String(7), nullable=True)  # Color final del gradiente del avatar
 
     clientes = db.relationship("Cliente", backref="negocio", lazy=True, cascade="all, delete-orphan")
     reservas = db.relationship("Reserva", backref="negocio", lazy=True, cascade="all, delete-orphan")
@@ -46,10 +95,30 @@ class Usuario(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    nombre = db.Column(db.String(100), nullable=True)  # Nombre del empleado/staff
+    telefono = db.Column(db.String(20), nullable=True)  # Teléfono de contacto
     negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False, index=True)
     negocio = db.relationship("Negocio", backref="usuarios")
+
+    # === NUEVOS CAMPOS RBAC ===
+    role = db.Column(db.String(20), default=UserRole.ADMIN)  # 'admin' o 'staff'
+    is_active = db.Column(db.Boolean, default=True)  # Para desactivar empleados sin borrar
+
+    # Token para recuperación de contraseña
     reset_token = db.Column(db.String(100), nullable=True)
     reset_token_expira = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Token para invitaciones (solo para nuevos usuarios invitados)
+    invitation_token = db.Column(db.String(100), nullable=True)
+    invitation_expira = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    def is_admin(self):
+        """Verifica si el usuario es administrador del negocio."""
+        return self.role == UserRole.ADMIN
+
+    def can_manage_users(self):
+        """Verifica si el usuario puede gestionar otros usuarios (solo admin)."""
+        return self.role == UserRole.ADMIN and self.is_active
 
 class Horario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,3 +134,40 @@ class Servicio(db.Model):
     duracion_min = db.Column(db.Integer, nullable=False, default=60)
     precio = db.Column(db.Float, nullable=True)
     activo = db.Column(db.Boolean, default=True)
+
+
+class AuditLog(db.Model):
+    """Registro de auditoría para acciones críticas del sistema."""
+    __tablename__ = 'audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=True)  # Quién realizó la acción
+    action = db.Column(db.String(50), nullable=False)  # Tipo de acción (AuditAction)
+    entity_type = db.Column(db.String(50), nullable=True)  # 'usuario', 'reserva', 'cliente', 'servicio', 'negocio'
+    entity_id = db.Column(db.Integer, nullable=True)  # ID de la entidad afectada
+    description = db.Column(db.String(500), nullable=True)  # Descripción legible
+    changes = db.Column(db.Text, nullable=True)  # JSON con valores antiguos/nuevos
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 o IPv6
+    user_agent = db.Column(db.String(255), nullable=True)  # Browser/Client info
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+    # Relaciones
+    negocio = db.relationship("Negocio", backref="audit_logs")
+    user = db.relationship("Usuario", backref="audit_logs")
+
+    def set_changes(self, old_values, new_values):
+        """Guarda los cambios como JSON."""
+        self.changes = json.dumps({
+            'old': old_values,
+            'new': new_values
+        })
+
+    def get_changes(self):
+        """Obtiene los cambios desde JSON."""
+        if self.changes:
+            return json.loads(self.changes)
+        return None
+
+    def __repr__(self):
+        return f'<AuditLog {self.action} by User {self.user_id} at {self.timestamp}>'

@@ -5,8 +5,19 @@
 
 {% block titulo %}Reservar en {{ negocio.nombre }}{% endblock %}
 
-
-
+{% block head_extra %}
+{% if negocio.plan == 'elite' and colores_marca %}
+<style>
+    :root {
+        --marca-acento: {{ colores_marca.color_acento }};
+        --marca-banner-start: {{ colores_marca.gradiente_banner_inicio }};
+        --marca-banner-end: {{ colores_marca.gradiente_banner_fin }};
+        --marca-avatar-start: {{ colores_marca.gradiente_avatar_inicio }};
+        --marca-avatar-end: {{ colores_marca.gradiente_avatar_fin }};
+    }
+</style>
+{% endif %}
+{% endblock %}
 
 {% block contenido %}
 
@@ -207,6 +218,15 @@
     Powered by <a href="{{ url_for('index') }}">Reserfy</a>
 </div>
 {% endif %}
+
+{# === WATERMARK DINÁMICO === #}
+{% set public_branding = {
+    'mostrar_marca_reserfy': negocio.plan in ['starter', 'pro'],
+    'marca_personalizada': negocio.marca_agua_personalizada if negocio.plan == 'elite' else None,
+    'es_elite': negocio.plan == 'elite'
+} %}
+{% from "macros/watermark.html" import render_watermark %}
+{{ render_watermark(public_branding, is_public_page=True) }}
 
 <script>
     const PLAN = "{{ negocio.plan }}";

@@ -81,9 +81,11 @@
     );
     background-size: 200% auto;
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
     animation: shimmer-text 3s linear infinite;
+    display: inline-block;
+    max-width: 100%;
 }
 
 /* ===== TEXT REVEAL GLOW ===== */
@@ -107,8 +109,12 @@
 
 .text-glow {
     color: white;
-    -webkit-text-fill-color: white;
     animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Combinación: shimmer con glow */
+.text-shimmer.text-glow {
+    -webkit-text-fill-color: transparent;
 }
 
 /* ===== HERO SHIMMER ===== */

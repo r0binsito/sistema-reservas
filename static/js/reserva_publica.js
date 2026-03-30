@@ -31,6 +31,21 @@ function irPaso(paso) {
     document.querySelectorAll('.reserva-panel').forEach(p => p.style.display = 'none');
     document.getElementById('panel-' + paso).style.display = 'block';
 
+    if (paso === 2) {
+    const wrap = document.getElementById('slots-wrap');
+    const container = document.getElementById('slots-container');
+    if (wrap) wrap.style.display = 'none';
+    if (container) container.innerHTML = '';
+    // Solo resetear fecha y hora si venimos del paso 1 (hacia adelante)
+    if (paso > pasoActual) {
+        fechaSeleccionada = null;
+        horaSeleccionada = null;
+        if (document.getElementById('fecha-hidden')) document.getElementById('fecha-hidden').value = '';
+        if (document.getElementById('hora-hidden')) document.getElementById('hora-hidden').value = '';
+        renderCalendario();
+    }
+}
+
     document.querySelectorAll('.reserva-step').forEach((s, i) => {
         const num = i + 1;
         s.classList.remove('activo', 'completado', 'activo-completado');
@@ -85,7 +100,17 @@ function mostrarAlerta(mensaje) {
 
 // ===== SERVICIOS =====
 function seleccionarServicio(card) {
+    const yaSeleccionado = card.classList.contains('selected');
+
     document.querySelectorAll('.reserva-servicio-card').forEach(c => c.classList.remove('selected'));
+
+    if (yaSeleccionado) {
+        // Deseleccionar
+        servicioSeleccionado = null;
+        document.getElementById('servicio-hidden').value = '';
+        return;
+    }
+
     card.classList.add('selected');
     servicioSeleccionado = card.dataset.nombre;
     document.getElementById('servicio-hidden').value = servicioSeleccionado;
@@ -106,11 +131,17 @@ function cargarSlots(fecha) {
     const container = document.getElementById('slots-container');
     const wrap = document.getElementById('slots-wrap');
 
-    container.innerHTML = '<p class="reserva-cargando">Cargando horarios...</p>';
-    wrap.style.display = 'block';
     horaSeleccionada = null;
-    document.getElementById('btn-paso-3').disabled = true;
     document.getElementById('hora-hidden').value = '';
+
+    // Solo mostrar wrap y cargando cuando hay fecha real
+    if (!fecha) {
+        wrap.style.display = 'none';
+        return;
+    }
+
+    wrap.style.display = 'block';
+    container.innerHTML = '<p class="reserva-cargando">Cargando horarios...</p>';
 
     fetch(`/b/${SLUG}/slots?fecha=${fecha}&servicio=${encodeURIComponent(servicioSeleccionado || '')}`)
         .then(r => r.json())

@@ -26,11 +26,12 @@ function toggleBilling() {
         labelMensual.style.fontWeight = '400';
         labelMensual.style.color = 'rgba(255,255,255,0.5)';
 
-        starterPrecio.textContent = '99.90';
-        starterPeriodo.textContent = 'por año';
-        starterAnual.textContent = 'equivale a $8.32/mes — ahorras $19.98';
-        starterAnual.style.display = 'block';
+        // Starter: Se mantiene GRATIS y verde
+        starterPrecio.textContent = 'GRATIS';
+        starterPeriodo.textContent = 'para siempre';
+        starterAnual.style.display = 'none';
 
+        // Pro y Elite cambian a Anual
         proPrecio.textContent = '199.90';
         proPeriodo.textContent = 'por año';
         proAnual.textContent = 'equivale a $16.66/mes — ahorras $39.98';
@@ -48,10 +49,12 @@ function toggleBilling() {
         labelAnual.style.fontWeight = '400';
         labelAnual.style.color = 'rgba(255,255,255,0.5)';
 
-        starterPrecio.textContent = '9.99';
-        starterPeriodo.textContent = 'por mes';
+        // Starter: Se mantiene GRATIS y verde
+        starterPrecio.textContent = 'GRATIS';
+        starterPeriodo.textContent = 'para siempre';
         starterAnual.style.display = 'none';
 
+        // Pro y Elite cambian a Mensual
         proPrecio.textContent = '19.99';
         proPeriodo.textContent = 'por mes';
         proAnual.style.display = 'none';

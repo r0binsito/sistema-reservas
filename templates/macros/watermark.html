@@ -1,0 +1,52 @@
+{#
+    Macro para renderizar la marca de agua según el plan del negocio.
+
+    Uso:
+        {% from "macros/watermark.html" import render_watermark %}
+
+        {{ render_watermark(branding_info, is_public_page=False) }}
+
+    Parámetros:
+        - branding_info: dict con 'mostrar_marca_reserfy', 'marca_personalizada', 'es_elite'
+        - is_public_page: bool - True para páginas públicas (reserva), False para dashboard
+#}
+
+{% macro render_watermark(branding_info, is_public_page=False) %}
+{% if branding_info %}
+
+    {# === ELITE: Marca personalizada o nada === #}
+    {% if branding_info.es_elite and branding_info.marca_personalizada %}
+    <div class="watermark watermark-custom {% if is_public_page %}watermark-public{% endif %}">
+        <span>{{ branding_info.marca_personalizada }}</span>
+    </div>
+
+    {# === ELITE sin marca personalizada: No mostrar nada === #}
+    {% elif branding_info.es_elite %}
+    {# Sin marca de agua para Elite sin personalización #}
+
+    {# === STARTER/PRO: Marca de Reserfy obligatoria === #}
+    {% elif branding_info.mostrar_marca_reserfy %}
+    <div class="watermark watermark-reserfy {% if is_public_page %}watermark-public{% endif %}">
+        <div class="watermark-content">
+            <span class="watermark-text">Powered by</span>
+            <a href="https://reserfy.com" target="_blank" rel="noopener" class="watermark-link">
+                <span class="watermark-logo">R</span>
+                <span class="watermark-brand">Reserfy</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+{% else %}
+    {# Fallback: Siempre mostrar marca de Reserfy si no hay branding_info #}
+    <div class="watermark watermark-reserfy {% if is_public_page %}watermark-public{% endif %}">
+        <div class="watermark-content">
+            <span class="watermark-text">Powered by</span>
+            <a href="https://reserfy.com" target="_blank" rel="noopener" class="watermark-link">
+                <span class="watermark-logo">R</span>
+                <span class="watermark-brand">Reserfy</span>
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endmacro %}

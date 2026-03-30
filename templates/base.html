@@ -8,6 +8,26 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    {% if color_primario %}
+    <style>
+        :root {
+            --elite-primary: {{ color_primario }};
+            --elite-secondary: {{ color_primario }}CC;
+        }
+        .btn-primary,
+        .btn-upgrade,
+        .btn-save,
+        .plan-btn-pro,
+        .btn-dynamic-elite {
+            background: linear-gradient(135deg, {{ color_primario }}, {{ color_primario }}CC) !important;
+        }
+        .btn-primary:hover,
+        .btn-upgrade:hover,
+        .btn-save:hover {
+            box-shadow: 0 4px 15px {{ color_primario }}40;
+        }
+    </style>
+    {% endif %}
     {% block head_extra %}{% endblock %}
 </head>
 
@@ -49,10 +69,14 @@
             <a href="{{ url_for('ver_servicios') }}">Servicios</a>
             <a href="{{ url_for('ver_reservas') }}">Agenda</a>
             <a href="{{ url_for('configurar_horario') }}">Horario</a>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('ver_empleados') }}">Empleados</a>
+            {% endif %}
             <a href="{{ url_for('perfil_negocio') }}">Perfil</a>
             <a href="{{ url_for('logout') }}">Salir</a>
             {% else %}
             <a href="{{ url_for('login') }}">Iniciar sesión</a>
+            <a href="{{ url_for('login') }}">Registrarse</a>
             {% endif %}
         </div>
     </nav>
@@ -89,9 +113,11 @@
 
     {% block footer_full %}{% endblock %}
 
-    <footer class="footer" id="site-footer">
-        <p>© 2026 Reserfy — Todos los derechos reservados</p>
-    </footer>
+    {# === WATERMARK / MARCA DE AGUA DINÁMICA === #}
+    {% if current_user.is_authenticated and branding_info %}
+        {% from "macros/watermark.html" import render_watermark %}
+        {{ render_watermark(branding_info, is_public_page=False) }}
+    {% endif %}
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
