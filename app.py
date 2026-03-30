@@ -37,7 +37,8 @@ app = Flask(__name__)
 if os.getenv("RAILWAY_ENVIRONMENT"):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-database_url = os.getenv("DATABASE_URL", "sqlite:///reservas.db")
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+database_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'reservas.db')}")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
