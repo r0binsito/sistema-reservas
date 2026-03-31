@@ -32,7 +32,7 @@
     <div class="banner-plan banner-plan-expired">
         <div class="banner-plan-text">
             <span class="banner-plan-icon">⚠️</span>
-            <span>Tu plan <strong>{{ plan_actual | upper }}</strong> ha vencido. Renueva para continuar.</span>
+            <span>Tu plan <strong>{{ plan_actual | upper }}</strong> {{ plan_frecuencia or 'mensual' }}{% if plan_vencimiento %} vence el <strong>{{ plan_vencimiento.strftime('%d/%m/%Y') }}</strong>{% endif %}.</span>
         </div>
         <a href="{{ url_for('upgrade') }}" class="banner-plan-btn">Renovar plan →</a>
     </div>
