@@ -103,6 +103,7 @@ class Usuario(UserMixin, db.Model):
     # === NUEVOS CAMPOS RBAC ===
     role = db.Column(db.String(20), default=UserRole.ADMIN)  # 'admin' o 'staff'
     is_active = db.Column(db.Boolean, default=True)  # Para desactivar empleados sin borrar
+    is_saas_admin = db.Column(db.Boolean, default=False)  # Súper administrador de la plataforma
 
     # Token para recuperación de contraseña
     reset_token = db.Column(db.String(100), nullable=True)
@@ -119,6 +120,10 @@ class Usuario(UserMixin, db.Model):
     def can_manage_users(self):
         """Verifica si el usuario puede gestionar otros usuarios (solo admin)."""
         return self.role == UserRole.ADMIN and self.is_active
+
+    def is_saas_admin_user(self):
+        """Verifica si el usuario es súper administrador de la plataforma."""
+        return self.is_saas_admin
 
 class Horario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -171,3 +176,64 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f'<AuditLog {self.action} by User {self.user_id} at {self.timestamp}>'
+
+
+class GlobalAuditLog(db.Model):
+    """
+    Registro de auditoría GLOBAL para el Súper Admin.
+    Registra acciones de TODA la plataforma, no solo de un negocio específico.
+    """
+    __tablename__ = 'global_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=True, index=True)  # Opcional
+    user_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=True)  # Quién realizó la acción
+    action = db.Column(db.String(50), nullable=False)  # Tipo de acción
+    entity_type = db.Column(db.String(50), nullable=True)  # 'negocio', 'usuario', 'plan', 'sistema'
+    entity_id = db.Column(db.Integer, nullable=True)  # ID de la entidad afectada
+    description = db.Column(db.String(500), nullable=True)  # Descripción legible
+    details = db.Column(db.Text, nullable=True)  # JSON con detalles adicionales
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 o IPv6
+    user_agent = db.Column(db.String(255), nullable=True)  # Browser/Client info
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+    # Relaciones
+    negocio = db.relationship("Negocio", backref="global_audit_logs")
+    user = db.relationship("Usuario", backref="global_audit_logs")
+
+    def set_details(self, data):
+        """Guarda detalles como JSON."""
+        self.details = json.dumps(data)
+
+    def get_details(self):
+        """Obtiene los detalles desde JSON."""
+        if self.details:
+            return json.loads(self.details)
+        return None
+
+    def __repr__(self):
+        return f'<GlobalAuditLog {self.action} at {self.timestamp}>'
+
+
+# === TIPOS DE ACCIÓN PARA AUDITORÍA GLOBAL ===
+class GlobalAuditAction:
+    # Negocios
+    NEGOCIO_CREADO = 'NEGOCIO_CREADO'
+    NEGOCIO_SUSPENDIDO = 'NEGOCIO_SUSPENDIDO'
+    NEGOCIO_ACTIVADO = 'NEGOCIO_ACTIVADO'
+    NEGOCIO_ELIMINADO = 'NEGOCIO_ELIMINADO'
+
+    # Planes
+    PLAN_CAMBIADO = 'PLAN_CAMBIADO'
+    PLAN_VENCIDO = 'PLAN_VENCIDO'
+    PLAN_RENOVADO = 'PLAN_RENOVADO'
+
+    # Usuarios
+    USUARIO_REGISTRADO = 'USUARIO_REGISTRADO'
+    USUARIO_ELIMINADO = 'USUARIO_ELIMINADO'
+    SAAS_ADMIN_LOGIN = 'SAAS_ADMIN_LOGIN'
+
+    # Sistema
+    SISTEMA_BACKUP = 'SISTEMA_BACKUP'
+    SISTEMA_ERROR = 'SISTEMA_ERROR'
+    SISTEMA_CONFIG = 'SISTEMA_CONFIG'

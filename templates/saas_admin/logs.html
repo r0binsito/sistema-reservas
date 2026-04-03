@@ -1,0 +1,191 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}Logs de Auditoría — SaaS Admin{% endblock %}
+{% block page_title %}Logs de Auditoría Global{% endblock %}
+{% block page_subtitle %}{{ total }} registros{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="saas-filters">
+    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%;">
+        <div class="saas-filter-group">
+            <label>Acción</label>
+            <select name="action">
+                <option value="">Todas</option>
+                {% for accion in acciones %}
+                <option value="{{ accion }}" {% if action_filter == accion %}selected{% endif %}>{{ accion }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Negocio</label>
+            <select name="negocio_id">
+                <option value="">Todos</option>
+                {% for n in negocios_lista %}
+                <option value="{{ n.id }}" {% if negocio_id == n.id %}selected{% endif %}>{{ n.nombre[:30] }}{% if n.nombre|length > 30 %}...{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Desde</label>
+            <input type="date" name="date_from" value="{{ date_from }}">
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Hasta</label>
+            <input type="date" name="date_to" value="{{ date_to }}">
+        </div>
+
+        <div class="saas-filter-group" style="align-self: flex-end;">
+            <button type="submit" class="saas-btn saas-btn-primary">Filtrar</button>
+            <a href="{{ url_for('saas_admin.logs') }}" class="saas-btn saas-btn-secondary">Limpiar</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="saas-table-container">
+    <div class="saas-table-wrapper">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                    <th>Usuario</th>
+                    <th>Negocio</th>
+                    <th>IP</th>
+                    <th>Detalles</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>
+                        <span style="white-space: nowrap;">{{ log.timestamp.strftime('%d/%m/%Y') }}</span>
+                        <br><small style="color: rgba(255,255,255,0.5);">{{ log.timestamp.strftime('%H:%M:%S') }}</small>
+                    </td>
+                    <td>
+                        <span class="saas-badge saas-badge-{% if 'NEGOCIO' in log.action %}warning{% elif 'PLAN' in log.action %}info{% elif 'USUARIO' in log.action %}success{% elif 'ERROR' in log.action %}danger{% else %}neutral{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td>{{ log.description or '-' }}</td>
+                    <td>
+                        {% if log.user_id %}
+                        <a href="{{ url_for('saas_admin.detalle_usuario', usuario_id=log.user_id) }}" style="color: #FA8F3E;">
+                            #{{ log.user_id }}
+                        </a>
+                        {% else %}
+                        Sistema
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.negocio_id %}
+                        <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=log.negocio_id) }}" style="color: #FA8F3E;">
+                            #{{ log.negocio_id }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ log.ip_address or '-' }}</td>
+                    <td>
+                        <button onclick="showDetails({{ log.id }})" class="saas-btn saas-btn-secondary saas-btn-sm">Ver</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem;">
+                        No hay registros de auditoría
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="saas-pagination">
+        <div class="saas-pagination-info">
+            Mostrando {{ logs|length }} de {{ total }} registros
+        </div>
+        <div class="saas-pagination-pages">
+            {% if has_prev %}
+            <a href="{{ url_for('saas_admin.logs', page=page-1, action=action_filter, negocio_id=negocio_id, date_from=date_from, date_to=date_to) }}">← Anterior</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="active">{{ p }}</span>
+                {% elif p > page - 3 and p < page + 3 %}
+                <a href="{{ url_for('saas_admin.logs', page=p, action=action_filter, negocio_id=negocio_id, date_from=date_from, date_to=date_to) }}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if has_next %}
+            <a href="{{ url_for('saas_admin.logs', page=page+1, action=action_filter, negocio_id=negocio_id, date_from=date_from, date_to=date_to) }}">Siguiente →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal for Details -->
+<div id="detailModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #1a1a2e; border-radius: 12px; padding: 2rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="color: #fff; margin: 0;">Detalles del Log</h3>
+            <button onclick="closeModal()" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div id="modalContent"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showDetails(logId) {
+    fetch(`/saas-admin/api/logs/${logId}`)
+        .then(response => response.json())
+        .then(data => {
+            let html = '<div style="color: rgba(255,255,255,0.85);">';
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">ID:</strong> ${data.id}</p>`;
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">Acción:</strong> ${data.action}</p>`;
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">Descripción:</strong> ${data.description || '-'}</p>`;
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">IP:</strong> ${data.ip_address || '-'}</p>`;
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">User Agent:</strong> ${data.user_agent || '-'}</p>`;
+            html += `<p><strong style="color: rgba(255,255,255,0.5);">Timestamp:</strong> ${data.timestamp || '-'}</p>`;
+
+            if (data.details) {
+                html += `<p><strong style="color: rgba(255,255,255,0.5);">Detalles:</strong></p>`;
+                html += `<pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">${JSON.stringify(data.details, null, 2)}</pre>`;
+            }
+            html += '</div>';
+
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('detailModal').style.display = 'flex';
+        })
+        .catch(error => {
+            document.getElementById('modalContent').innerHTML = '<p style="color: #e74c3c;">Error al cargar detalles</p>';
+            document.getElementById('detailModal').style.display = 'flex';
+        });
+}
+
+function closeModal() {
+    document.getElementById('detailModal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('detailModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

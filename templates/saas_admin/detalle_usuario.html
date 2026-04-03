@@ -1,0 +1,119 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}{{ usuario.email }} — SaaS Admin{% endblock %}
+{% block page_title %}{{ usuario.nombre or usuario.email }}{% endblock %}
+{% block page_subtitle %}Usuario #{{ usuario.id }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <a href="{{ url_for('saas_admin.usuarios') }}" class="saas-btn saas-btn-secondary">← Volver a Usuarios</a>
+    <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=usuario.negocio_id) }}" class="saas-btn saas-btn-secondary">Ver Negocio</a>
+</div>
+
+<!-- User Card -->
+<div class="saas-detail-card">
+    <div class="saas-detail-header">
+        <div>
+            <div class="saas-detail-title">{{ usuario.nombre or 'Sin nombre' }}</div>
+            <div class="saas-detail-subtitle">{{ usuario.email }}</div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            {% if usuario.is_active %}
+                <span class="saas-badge saas-badge-success">Activo</span>
+            {% else %}
+                <span class="saas-badge saas-badge-danger">Inactivo</span>
+            {% endif %}
+            {% if usuario.is_saas_admin %}
+                <span class="saas-badge saas-badge-warning">SAAS Admin</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="saas-detail-grid">
+        <div class="saas-detail-item">
+            <label>ID</label>
+            <span>{{ usuario.id }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Email</label>
+            <span>{{ usuario.email }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Nombre</label>
+            <span>{{ usuario.nombre or '-' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Teléfono</label>
+            <span>{{ usuario.telefono or '-' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Rol</label>
+            <span>
+                <span class="saas-badge saas-badge-{% if usuario.role == 'admin' %}warning{% else %}info{% endif %}">
+                    {{ usuario.role|upper }}
+                </span>
+            </span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Negocio</label>
+            <span>
+                {% if usuario.negocio %}
+                    <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=usuario.negocio.id) }}" style="color: #FA8F3E;">
+                        {{ usuario.negocio.nombre }}
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- SAAS Admin Actions -->
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+        <h4 style="color: rgba(255,255,255,0.8); margin-bottom: 1rem; font-size: 1rem;">Permisos de Súper Admin</h4>
+        {% if usuario.is_saas_admin %}
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem;">Este usuario tiene permisos de Súper Admin.</p>
+            {% if usuario.id != current_user.id %}
+            <form method="POST" action="{{ url_for('saas_admin.quitar_saas_admin', usuario_id=usuario.id) }}">
+                <button type="submit" class="saas-btn saas-btn-danger" data-confirm="¿Quitar permisos de SAAS Admin?">Quitar Permisos de Admin</button>
+            </form>
+            {% else %}
+            <p style="color: rgba(255,255,255,0.4); font-size: 0.9rem;">No puedes quitarte tus propios permisos.</p>
+            {% endif %}
+        {% else %}
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem;">Este usuario NO tiene permisos de Súper Admin.</p>
+            <form method="POST" action="{{ url_for('saas_admin.hacer_saas_admin', usuario_id=usuario.id) }}">
+                <button type="submit" class="saas-btn saas-btn-success">Hacer Súper Admin</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Audit Logs -->
+<div class="saas-detail-card">
+    <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Historial de Actividad</h3>
+    {% if logs %}
+        {% for log in logs %}
+        <div class="saas-log-entry">
+            <div class="saas-log-icon" style="background: rgba(52, 152, 219, 0.2);">
+                {% if 'LOGIN' in log.action %}🔐
+                {% elif 'PLAN' in log.action %}📋
+                {% elif 'USUARIO' in log.action %}👤
+                {% else %}📝{% endif %}
+            </div>
+            <div class="saas-log-content">
+                <div class="saas-log-action">{{ log.action }}</div>
+                <div class="saas-log-description">{{ log.description or 'Sin descripción' }}</div>
+                <div class="saas-log-meta">
+                    <span>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</span>
+                    {% if log.ip_address %}<span>IP: {{ log.ip_address }}</span>{% endif %}
+                    {% if log.negocio_id %}<span>Negocio #{{ log.negocio_id }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p style="color: rgba(255,255,255,0.5); text-align: center;">Sin registros de actividad</p>
+    {% endif %}
+</div>
+{% endblock %}

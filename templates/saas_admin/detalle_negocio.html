@@ -1,0 +1,234 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}{{ negocio.nombre }} — SaaS Admin{% endblock %}
+{% block page_title %}{{ negocio.nombre }}{% endblock %}
+{% block page_subtitle %}Negocio #{{ negocio.id }} • {{ negocio.email }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+    <a href="{{ url_for('saas_admin.negocios') }}" class="saas-btn saas-btn-secondary">← Volver a Negocios</a>
+    <a href="{{ url_for('reserva_publica', slug=negocio.slug) }}" target="_blank" class="saas-btn saas-btn-primary">Ver Página Pública</a>
+</div>
+
+<!-- Info Card -->
+<div class="saas-detail-card">
+    <div class="saas-detail-header">
+        <div>
+            <div class="saas-detail-title">{{ negocio.nombre }}</div>
+            <div class="saas-detail-subtitle">{{ negocio.eslogan or 'Sin eslogan' }}</div>
+        </div>
+        <div>
+            {% if plan_activo_fn(negocio) %}
+                <span class="saas-badge saas-badge-success">Activo</span>
+            {% else %}
+                <span class="saas-badge saas-badge-danger">Vencido</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="saas-detail-grid">
+        <div class="saas-detail-item">
+            <label>Email</label>
+            <span>{{ negocio.email }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Teléfono</label>
+            <span>{{ negocio.telefono or '-' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Dirección</label>
+            <span>{{ negocio.direccion or '-' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Tipo</label>
+            <span>{{ negocio.tipo or '-' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Slug</label>
+            <span>{{ negocio.slug }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Timezone</label>
+            <span>{{ negocio.timezone }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Plan Card -->
+<div class="saas-detail-card">
+    <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Plan y Suscripción</h3>
+
+    <div class="saas-detail-grid">
+        <div class="saas-detail-item">
+            <label>Plan Actual</label>
+            <span>
+                <span class="saas-badge saas-badge-{% if negocio.plan == 'elite' %}warning{% elif negocio.plan == 'pro' %}success{% elif negocio.plan == 'starter' %}info{% else %}neutral{% endif %}">
+                    {{ negocio.plan|upper }}
+                </span>
+            </span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Ciclo</label>
+            <span>{{ negocio.plan_frecuencia or 'unico' }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Fecha Vencimiento</label>
+            <span>
+                {% if negocio.plan_vence %}
+                    {{ negocio.plan_vence.strftime('%d/%m/%Y a las %H:%M') }}
+                    <br><small style="color: rgba(255,255,255,0.5);">{{ formatear_tiempo(dias_restantes(negocio)) }}</small>
+                {% else %}
+                    Sin fecha
+                {% endif %}
+            </span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Trial Expira</label>
+            <span>
+                {% if negocio.trial_expira %}
+                    {{ negocio.trial_expira.strftime('%d/%m/%Y') }}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Change Plan Form -->
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+        <h4 style="color: rgba(255,255,255,0.8); margin-bottom: 1rem; font-size: 1rem;">Cambiar Plan</h4>
+        <form method="POST" action="{{ url_for('saas_admin.cambiar_plan_negocio', negocio_id=negocio.id) }}" style="display: flex; gap: 1rem; align-items: flex-end;">
+            <div class="saas-form-group" style="margin-bottom: 0;">
+                <label>Nuevo Plan</label>
+                <select name="plan" required>
+                    <option value="trial" {% if negocio.plan == 'trial' %}selected{% endif %}>Trial (14 días)</option>
+                    <option value="starter" {% if negocio.plan == 'starter' %}selected{% endif %}>Starter</option>
+                    <option value="pro" {% if negocio.plan == 'pro' %}selected{% endif %}>Pro</option>
+                    <option value="elite" {% if negocio.plan == 'elite' %}selected{% endif %}>Elite</option>
+                </select>
+            </div>
+            <div class="saas-form-group" style="margin-bottom: 0;">
+                <label>Ciclo</label>
+                <select name="ciclo">
+                    <option value="mensual" {% if negocio.plan_frecuencia == 'mensual' %}selected{% endif %}>Mensual (30 días)</option>
+                    <option value="anual" {% if negocio.plan_frecuencia == 'anual' %}selected{% endif %}>Anual (365 días)</option>
+                </select>
+            </div>
+            <button type="submit" class="saas-btn saas-btn-primary">Actualizar Plan</button>
+        </form>
+    </div>
+
+    <!-- Suspend/Activate -->
+    <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+        {% if plan_activo_fn(negocio) %}
+        <form method="POST" action="{{ url_for('saas_admin.suspender_negocio', negocio_id=negocio.id) }}">
+            <button type="submit" class="saas-btn saas-btn-danger" data-confirm="¿Suspender este negocio? Los usuarios no podrán acceder.">Suspender Negocio</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('saas_admin.activar_negocio', negocio_id=negocio.id) }}">
+            <button type="submit" class="saas-btn saas-btn-success">Activar Negocio (30 días)</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Stats Card -->
+<div class="saas-detail-card">
+    <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Estadísticas</h3>
+    <div class="saas-detail-grid">
+        <div class="saas-detail-item">
+            <label>Usuarios</label>
+            <span>{{ usuarios|length }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Clientes</label>
+            <span>{{ total_clientes }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Servicios Activos</label>
+            <span>{{ total_servicios }}</span>
+        </div>
+        <div class="saas-detail-item">
+            <label>Reservas Este Mes</label>
+            <span>{{ reservas_mes }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Users Card -->
+<div class="saas-detail-card">
+    <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Usuarios del Negocio</h3>
+    {% if usuarios %}
+    <div class="saas-table-wrapper">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>SAAS Admin</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario.id }}</td>
+                    <td>{{ usuario.nombre or '-' }}</td>
+                    <td>{{ usuario.email }}</td>
+                    <td>
+                        <span class="saas-badge saas-badge-{% if usuario.role == 'admin' %}warning{% else %}info{% endif %}">
+                            {{ usuario.role|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if usuario.is_active %}
+                            <span class="saas-badge saas-badge-success">Activo</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if usuario.is_saas_admin %}
+                            <span class="saas-badge saas-badge-warning">SÍ</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-neutral">No</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: rgba(255,255,255,0.5); text-align: center;">Sin usuarios</p>
+    {% endif %}
+</div>
+
+<!-- Audit Logs -->
+<div class="saas-detail-card">
+    <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Historial de Auditoría</h3>
+    {% if logs %}
+        {% for log in logs %}
+        <div class="saas-log-entry">
+            <div class="saas-log-icon" style="background: rgba(250, 143, 62, 0.2);">
+                {% if 'PLAN' in log.action %}📋
+                {% elif 'NEGOCIO' in log.action %}🏢
+                {% else %}📝{% endif %}
+            </div>
+            <div class="saas-log-content">
+                <div class="saas-log-action">{{ log.action }}</div>
+                <div class="saas-log-description">{{ log.description or 'Sin descripción' }}</div>
+                <div class="saas-log-meta">
+                    <span>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</span>
+                    {% if log.ip_address %}<span>IP: {{ log.ip_address }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p style="color: rgba(255,255,255,0.5); text-align: center;">Sin registros de auditoría</p>
+    {% endif %}
+</div>
+{% endblock %}

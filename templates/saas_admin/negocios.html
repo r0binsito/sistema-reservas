@@ -1,0 +1,138 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}Negocios — SaaS Admin{% endblock %}
+{% block page_title %}Gestión de Negocios{% endblock %}
+{% block page_subtitle %}{{ total }} negocios registrados{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="saas-filters">
+    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%;">
+        <div class="saas-filter-group">
+            <label>Buscar</label>
+            <input type="text" name="q" value="{{ busqueda }}" placeholder="Nombre o email...">
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Plan</label>
+            <select name="plan">
+                <option value="">Todos</option>
+                <option value="trial" {% if plan_filter == 'trial' %}selected{% endif %}>Trial</option>
+                <option value="starter" {% if plan_filter == 'starter' %}selected{% endif %}>Starter</option>
+                <option value="pro" {% if plan_filter == 'pro' %}selected{% endif %}>Pro</option>
+                <option value="elite" {% if plan_filter == 'elite' %}selected{% endif %}>Elite</option>
+            </select>
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Estado</label>
+            <select name="estado">
+                <option value="">Todos</option>
+                <option value="activo" {% if estado_filter == 'activo' %}selected{% endif %}>Activos</option>
+                <option value="vencido" {% if estado_filter == 'vencido' %}selected{% endif %}>Vencidos</option>
+            </select>
+        </div>
+
+        <div class="saas-filter-group" style="align-self: flex-end;">
+            <button type="submit" class="saas-btn saas-btn-primary">Filtrar</button>
+            <a href="{{ url_for('saas_admin.negocios') }}" class="saas-btn saas-btn-secondary">Limpiar</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="saas-table-container">
+    <div class="saas-table-wrapper">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Tipo</th>
+                    <th>Plan</th>
+                    <th>Ciclo</th>
+                    <th>Estado</th>
+                    <th>Vence</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for negocio in negocios %}
+                <tr>
+                    <td>{{ negocio.id }}</td>
+                    <td>
+                        <strong style="color: #fff;">{{ negocio.nombre }}</strong>
+                        <br><small style="color: rgba(255,255,255,0.5);">{{ negocio.slug }}</small>
+                    </td>
+                    <td>{{ negocio.email }}</td>
+                    <td>{{ negocio.tipo or '-' }}</td>
+                    <td>
+                        <span class="saas-badge saas-badge-{% if negocio.plan == 'elite' %}warning{% elif negocio.plan == 'pro' %}success{% elif negocio.plan == 'starter' %}info{% else %}neutral{% endif %}">
+                            {{ negocio.plan|upper }}
+                        </span>
+                    </td>
+                    <td>{{ negocio.plan_frecuencia or '-' }}</td>
+                    <td>
+                        {% if plan_activo_fn(negocio) %}
+                            <span class="saas-badge saas-badge-success">Activo</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-danger">Vencido</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if negocio.plan_vence %}
+                            {{ negocio.plan_vence.strftime('%d/%m/%Y') }}
+                            {% set dias = dias_restantes(negocio) %}
+                            {% if dias is not none %}
+                                <br><small style="color: rgba(255,255,255,0.5);">({{ dias }} días)</small>
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=negocio.id) }}" class="saas-btn saas-btn-secondary saas-btn-sm">Ver</a>
+                            <a href="{{ url_for('reserva_publica', slug=negocio.slug) }}" target="_blank" class="saas-btn saas-btn-secondary saas-btn-sm">🔗</a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem;">
+                        No se encontraron negocios
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="saas-pagination">
+        <div class="saas-pagination-info">
+            Mostrando {{ negocios|length }} de {{ total }} negocios
+        </div>
+        <div class="saas-pagination-pages">
+            {% if has_prev %}
+            <a href="{{ url_for('saas_admin.negocios', page=page-1, plan=plan_filter, estado=estado_filter, q=busqueda) }}">← Anterior</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="active">{{ p }}</span>
+                {% else %}
+                <a href="{{ url_for('saas_admin.negocios', page=p, plan=plan_filter, estado=estado_filter, q=busqueda) }}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if has_next %}
+            <a href="{{ url_for('saas_admin.negocios', page=page+1, plan=plan_filter, estado=estado_filter, q=busqueda) }}">Siguiente →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

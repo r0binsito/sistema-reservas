@@ -1,0 +1,123 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}Usuarios — SaaS Admin{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+{% block page_subtitle %}{{ total }} usuarios en la plataforma{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="saas-filters">
+    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 1rem; width: 100%;">
+        <div class="saas-filter-group">
+            <label>Buscar</label>
+            <input type="text" name="q" value="{{ busqueda }}" placeholder="Email o nombre...">
+        </div>
+
+        <div class="saas-filter-group">
+            <label>Rol</label>
+            <select name="rol">
+                <option value="">Todos</option>
+                <option value="admin" {% if rol_filter == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="staff" {% if rol_filter == 'staff' %}selected{% endif %}>Staff</option>
+            </select>
+        </div>
+
+        <div class="saas-filter-group" style="align-self: flex-end;">
+            <button type="submit" class="saas-btn saas-btn-primary">Filtrar</button>
+            <a href="{{ url_for('saas_admin.usuarios') }}" class="saas-btn saas-btn-secondary">Limpiar</a>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="saas-table-container">
+    <div class="saas-table-wrapper">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Negocio</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>SAAS Admin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario.id }}</td>
+                    <td>{{ usuario.nombre or '-' }}</td>
+                    <td>{{ usuario.email }}</td>
+                    <td>
+                        {% if usuario.negocio %}
+                        <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=usuario.negocio.id) }}" style="color: #FA8F3E;">
+                            {{ usuario.negocio.nombre[:25] }}{% if usuario.negocio.nombre|length > 25 %}...{% endif %}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="saas-badge saas-badge-{% if usuario.role == 'admin' %}warning{% else %}info{% endif %}">
+                            {{ usuario.role|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if usuario.is_active %}
+                            <span class="saas-badge saas-badge-success">Activo</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-danger">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if usuario.is_saas_admin %}
+                            <span class="saas-badge saas-badge-warning">SÍ</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-neutral">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('saas_admin.detalle_usuario', usuario_id=usuario.id) }}" class="saas-btn saas-btn-secondary saas-btn-sm">Ver</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: rgba(255,255,255,0.5); padding: 2rem;">
+                        No se encontraron usuarios
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="saas-pagination">
+        <div class="saas-pagination-info">
+            Mostrando {{ usuarios|length }} de {{ total }} usuarios
+        </div>
+        <div class="saas-pagination-pages">
+            {% if has_prev %}
+            <a href="{{ url_for('saas_admin.usuarios', page=page-1, rol=rol_filter, q=busqueda) }}">← Anterior</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="active">{{ p }}</span>
+                {% else %}
+                <a href="{{ url_for('saas_admin.usuarios', page=p, rol=rol_filter, q=busqueda) }}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if has_next %}
+            <a href="{{ url_for('saas_admin.usuarios', page=page+1, rol=rol_filter, q=busqueda) }}">Siguiente →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

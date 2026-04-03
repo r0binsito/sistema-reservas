@@ -1,0 +1,167 @@
+{% extends "saas_admin/base.html" %}
+
+{% block title %}Dashboard — SaaS Admin{% endblock %}
+{% block page_title %}Dashboard Global{% endblock %}
+{% block page_subtitle %}Vista general de la plataforma{% endblock %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="saas-stats-grid">
+    <div class="saas-stat-card highlight">
+        <div class="saas-stat-icon orange">🏢</div>
+        <div class="saas-stat-value">{{ total_negocios }}</div>
+        <div class="saas-stat-label">Total Negocios</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon green">✅</div>
+        <div class="saas-stat-value">{{ negocios_activos }}</div>
+        <div class="saas-stat-label">Negocios Activos</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon red">⚠️</div>
+        <div class="saas-stat-value">{{ negocios_vencidos }}</div>
+        <div class="saas-stat-label">Negocios Vencidos</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon blue">👥</div>
+        <div class="saas-stat-value">{{ total_usuarios }}</div>
+        <div class="saas-stat-label">Total Usuarios</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon purple">👤</div>
+        <div class="saas-stat-value">{{ total_clientes }}</div>
+        <div class="saas-stat-label">Total Clientes</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon yellow">📅</div>
+        <div class="saas-stat-value">{{ total_reservas }}</div>
+        <div class="saas-stat-label">Total Reservas</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon blue">📆</div>
+        <div class="saas-stat-value">{{ reservas_hoy }}</div>
+        <div class="saas-stat-label">Reservas Hoy</div>
+    </div>
+
+    <div class="saas-stat-card">
+        <div class="saas-stat-icon green">📊</div>
+        <div class="saas-stat-value">{{ reservas_mes }}</div>
+        <div class="saas-stat-label">Reservas Este Mes</div>
+    </div>
+
+    <div class="saas-stat-card highlight">
+        <div class="saas-stat-icon orange">💰</div>
+        <div class="saas-stat-value">${{ ingresos_estimados }}</div>
+        <div class="saas-stat-label">Ingresos Estimados (USD)</div>
+    </div>
+</div>
+
+<!-- Two Column Layout -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <!-- Planes Distribution -->
+    <div class="saas-detail-card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Distribución por Plan</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <span style="color: rgba(255,255,255,0.8);">Trial</span>
+                <span class="saas-badge saas-badge-neutral">{{ planes_data.get('trial', 0) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <span style="color: rgba(255,255,255,0.8);">Starter</span>
+                <span class="saas-badge saas-badge-info">{{ planes_data.get('starter', 0) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <span style="color: rgba(255,255,255,0.8);">Pro</span>
+                <span class="saas-badge saas-badge-success">{{ planes_data.get('pro', 0) }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <span style="color: rgba(255,255,255,0.8);">Elite</span>
+                <span class="saas-badge saas-badge-warning">{{ planes_data.get('elite', 0) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="saas-detail-card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.1rem;">Actividad Reciente</h3>
+        {% if ultimos_logs %}
+            {% for log in ultimos_logs %}
+            <div class="saas-log-entry">
+                <div class="saas-log-icon" style="background: rgba(250, 143, 62, 0.2);">
+                    {% if 'NEGOCIO' in log.action %}🏢
+                    {% elif 'PLAN' in log.action %}📋
+                    {% elif 'USUARIO' in log.action %}👤
+                    {% else %}📝{% endif %}
+                </div>
+                <div class="saas-log-content">
+                    <div class="saas-log-action">{{ log.action }}</div>
+                    <div class="saas-log-description">{{ log.description or 'Sin descripción' }}</div>
+                    <div class="saas-log-meta">
+                        <span>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</span>
+                        {% if log.negocio_id %}<span>Negocio #{{ log.negocio_id }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: rgba(255,255,255,0.5); text-align: center; padding: 1rem;">Sin actividad reciente</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Businesses -->
+<div class="saas-table-container" style="margin-top: 1.5rem;">
+    <div class="saas-table-header">
+        <span class="saas-table-title">Últimos Negocios Registrados</span>
+        <a href="{{ url_for('saas_admin.negocios') }}" class="saas-btn saas-btn-secondary saas-btn-sm">Ver todos</a>
+    </div>
+    <div class="saas-table-wrapper">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Plan</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for negocio in ultimos_negocios %}
+                <tr>
+                    <td>{{ negocio.id }}</td>
+                    <td>{{ negocio.nombre }}</td>
+                    <td>{{ negocio.email }}</td>
+                    <td>
+                        <span class="saas-badge saas-badge-{% if negocio.plan == 'elite' %}warning{% elif negocio.plan == 'pro' %}success{% elif negocio.plan == 'starter' %}info{% else %}neutral{% endif %}">
+                            {{ negocio.plan|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if plan_activo_fn(negocio) %}
+                            <span class="saas-badge saas-badge-success">Activo</span>
+                        {% else %}
+                            <span class="saas-badge saas-badge-danger">Vencido</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('saas_admin.detalle_negocio', negocio_id=negocio.id) }}" class="saas-btn saas-btn-secondary saas-btn-sm">Ver</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: rgba(255,255,255,0.5);">No hay negocios registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

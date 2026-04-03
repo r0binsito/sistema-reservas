@@ -37,3 +37,17 @@ python app.py
 - Google OAuth (flask-dance)
 - PostgreSQL (producción) / SQLite (local)
 - Railway (deploy)
+
+
+## Para Configurar el Primer SAAS Admin:
+
+  # Opción 1: Variable de entorno
+  export SAAS_ADMIN_EMAIL=tu@email.com
+  python setup_saas_admin.py
+
+  # Opción 2: Argumento
+  python setup_saas_admin.py --email tu@email.com
+
+  Para Acceder al Panel:
+  
+  /saas-admin/dashboard

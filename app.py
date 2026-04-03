@@ -20,8 +20,8 @@ from flask_dance.consumer import oauth_authorized, oauth_error
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
 
-from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio, AuditLog, UserRole, AuditAction
-from decorators import requires_role, requires_admin, requires_plan, requires_active_plan, log_audit, can_user_manage_users, check_user_limit
+from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio, AuditLog, UserRole, AuditAction, GlobalAuditLog, GlobalAuditAction
+from decorators import requires_role, requires_admin, requires_plan, requires_active_plan, log_audit, can_user_manage_users, check_user_limit, requires_saas_admin, is_saas_admin, log_global_audit, get_global_audit_logs, get_global_audit_logs_count
 from utils.subscription import plan_activo, dias_restantes_plan, formatear_tiempo_restante, estado_plan
 
 load_dotenv()
@@ -76,6 +76,10 @@ def forzar_estado_oauth():
             session['google_oauth_state'] = request.args.get('state', '')
 
 app.register_blueprint(google_bp, url_prefix="/auth")
+
+# Registrar blueprint de SaaS Admin
+from saas_admin import saas_admin as saas_admin_bp
+app.register_blueprint(saas_admin_bp)
 
 db.init_app(app)
 
@@ -452,7 +456,7 @@ def registro():
         db.session.add(usuario)
         db.session.commit()
 
-        # Registrar en auditoría
+        # Registrar en auditoría local
         log_audit(
             action=AuditAction.USUARIO_CREADO,
             entity_type='usuario',
@@ -460,6 +464,22 @@ def registro():
             description=f"Usuario admin creado: {email}",
             user=usuario,
             negocio=negocio
+        )
+
+        # Registrar en auditoría global (SAAS Admin)
+        log_global_audit(
+            action=GlobalAuditAction.NEGOCIO_CREADO,
+            negocio_id=negocio.id,
+            entity_type='negocio',
+            entity_id=negocio.id,
+            description=f"Nuevo negocio registrado: {negocio.nombre}"
+        )
+        log_global_audit(
+            action=GlobalAuditAction.USUARIO_REGISTRADO,
+            negocio_id=negocio.id,
+            entity_type='usuario',
+            entity_id=usuario.id,
+            description=f"Nuevo usuario registrado: {email}"
         )
 
         login_user(usuario)
@@ -476,6 +496,16 @@ def elegir_plan():
         if plan in ["starter", "pro", "elite"]:
             current_user.negocio.plan = plan
             db.session.commit()
+
+            # Registrar en auditoría global
+            log_global_audit(
+                action=GlobalAuditAction.PLAN_CAMBIADO,
+                negocio_id=current_user.negocio.id,
+                entity_type='negocio',
+                entity_id=current_user.negocio.id,
+                description=f"Plan seleccionado durante registro: {plan}",
+                details={'plan': plan, 'frecuencia': 'mensual'}
+            )
         return redirect(url_for("configurar_negocio"))
     return render_template("elegir_plan.html", paso=2)
     
@@ -496,7 +526,7 @@ def login():
 
             login_user(usuario)
 
-            # Registrar login exitoso en auditoría
+            # Registrar login exitoso en auditoría local
             log_audit(
                 action=AuditAction.LOGIN_EXITOSO,
                 entity_type='usuario',
@@ -504,6 +534,15 @@ def login():
                 description=f"Inicio de sesión exitoso: {email}",
                 user=usuario
             )
+
+            # Registrar en auditoría global si es SAAS Admin
+            if is_saas_admin(usuario):
+                log_global_audit(
+                    action=GlobalAuditAction.SAAS_ADMIN_LOGIN,
+                    entity_type='usuario',
+                    entity_id=usuario.id,
+                    description=f"SAAS Admin login: {email}"
+                )
 
             return redirect(url_for("dashboard"))
 
@@ -1868,6 +1907,39 @@ with app.app_context():
             pass
         try:
             conn.execute(db.text("ALTER TABLE usuario ADD COLUMN invitation_expira DATETIME"))
+            conn.commit()
+        except:
+            pass
+        # Columna is_saas_admin para Súper Admin
+        try:
+            conn.execute(db.text("ALTER TABLE usuario ADD COLUMN is_saas_admin BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+        except:
+            pass
+        # Tabla global_audit_log para auditoría global
+        try:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS global_audit_log (
+                    id SERIAL PRIMARY KEY,
+                    negocio_id INTEGER REFERENCES negocio(id),
+                    user_id INTEGER REFERENCES usuario(id),
+                    action VARCHAR(50) NOT NULL,
+                    entity_type VARCHAR(50),
+                    entity_id INTEGER,
+                    description VARCHAR(500),
+                    details TEXT,
+                    ip_address VARCHAR(45),
+                    user_agent VARCHAR(255),
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+        except:
+            pass
+        # Índices para global_audit_log
+        try:
+            conn.execute(db.text("CREATE INDEX IF NOT EXISTS idx_global_audit_negocio ON global_audit_log(negocio_id)"))
+            conn.execute(db.text("CREATE INDEX IF NOT EXISTS idx_global_audit_timestamp ON global_audit_log(timestamp)"))
             conn.commit()
         except:
             pass

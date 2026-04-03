@@ -4,14 +4,17 @@ Incluye:
 - @requires_role('admin') - Protege rutas según rol
 - @requires_active_plan - Protege rutas si el plan está vencido
 - @audit_action('ACCION') - Registra acciones automáticamente
+- @requires_saas_admin - Protege rutas del Súper Admin
 - Funciones auxiliares para verificación de permisos
 """
 
+import os
 from functools import wraps
-from flask import request, redirect, url_for, flash, jsonify
+from flask import request, redirect, url_for, flash, jsonify, abort
 from flask_login import current_user
-from models import db, AuditLog, UserRole, AuditAction
+from models import db, AuditLog, UserRole, AuditAction, GlobalAuditLog, GlobalAuditAction
 from datetime import datetime, timezone
+import json
 
 
 # === DECORador DE PLAN ACTIVO ===
@@ -286,5 +289,199 @@ def get_audit_logs_count(negocio_id, action_filter=None):
 
     if action_filter:
         query = query.filter(AuditLog.action == action_filter)
+
+    return query.count()
+
+
+# === SISTEMA DE SÚPER ADMIN (SaaS Admin) ===
+
+def is_saas_admin(user=None):
+    """
+    Verifica si un usuario es Súper Administrador de la plataforma.
+
+    Verifica:
+    1. Flag is_saas_admin en la base de datos
+    2. Variable de entorno SAAS_ADMIN_EMAIL coincide con el email
+
+    Args:
+        user: Usuario a verificar (default: current_user)
+
+    Returns:
+        bool: True si es Súper Admin, False si no
+    """
+    if user is None:
+        try:
+            user = current_user if current_user.is_authenticated else None
+        except:
+            return False
+
+    if not user:
+        return False
+
+    # Verificar flag en la base de datos
+    if hasattr(user, 'is_saas_admin') and user.is_saas_admin:
+        return True
+
+    # Verificar variable de entorno
+    saas_admin_email = os.getenv('SAAS_ADMIN_EMAIL')
+    if saas_admin_email and user.email:
+        # Soportar múltiples emails separados por coma
+        admin_emails = [e.strip().lower() for e in saas_admin_email.split(',')]
+        if user.email.lower() in admin_emails:
+            return True
+
+    return False
+
+
+def requires_saas_admin(f):
+    """
+    Decorador que restringe el acceso solo a Súper Administradores.
+
+    Uso:
+        @app.route('/saas-admin/dashboard')
+        @login_required
+        @requires_saas_admin
+        def saas_admin_dashboard():
+            ...
+
+    Si el usuario no es Súper Admin:
+    - Retorna 403 Forbidden para requests AJAX/API
+    - Redirige al dashboard para requests normales
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Debes iniciar sesión para acceder.', 'error')
+            return redirect(url_for('login'))
+
+        if not is_saas_admin(current_user):
+            # Si es request AJAX/API, retornar 403
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+            flash('No tienes permisos para acceder a esta sección.', 'error')
+            return redirect(url_for('dashboard'))
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def log_global_audit(action, negocio_id=None, user_id=None, entity_type=None,
+                     entity_id=None, description=None, details=None):
+    """
+    Registra una acción en el log de auditoría GLOBAL.
+
+    Este log es visible solo para el Súper Admin y registra
+    acciones de toda la plataforma.
+
+    Args:
+        action: Tipo de acción (GlobalAuditAction)
+        negocio_id: ID del negocio afectado (opcional)
+        user_id: ID del usuario que realizó la acción (default: current_user)
+        entity_type: Tipo de entidad ('negocio', 'usuario', 'plan', etc.)
+        entity_id: ID de la entidad afectada
+        description: Descripción legible
+        details: Diccionario con detalles adicionales
+
+    Returns:
+        GlobalAuditLog instance o None si falla
+    """
+    try:
+        # Obtener usuario actual si no se proporciona
+        if user_id is None:
+            try:
+                user_id = current_user.id if current_user.is_authenticated else None
+            except:
+                user_id = None
+
+        # Crear el registro
+        log = GlobalAuditLog(
+            negocio_id=negocio_id,
+            user_id=user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            description=description
+        )
+
+        # Guardar detalles si se proporcionan
+        if details:
+            log.set_details(details)
+
+        # Obtener IP y User-Agent
+        try:
+            log.ip_address = request.remote_addr
+            log.user_agent = request.user_agent.string[:255] if request.user_agent else None
+        except:
+            log.ip_address = None
+            log.user_agent = None
+
+        db.session.add(log)
+        db.session.commit()
+
+        return log
+
+    except Exception as e:
+        print(f"Error en log_global_audit: {e}")
+        # No lanzar excepción para no interrumpir la operación principal
+        return None
+
+
+def get_global_audit_logs(limit=100, offset=0, action_filter=None,
+                          negocio_id=None, user_id=None,
+                          date_from=None, date_to=None):
+    """
+    Obtiene los logs de auditoría global con filtros.
+
+    Args:
+        limit: Máximo de registros a retornar
+        offset: Desplazamiento para paginación
+        action_filter: Filtrar por tipo de acción
+        negocio_id: Filtrar por negocio
+        user_id: Filtrar por usuario
+        date_from: Fecha inicial (datetime)
+        date_to: Fecha final (datetime)
+
+    Returns:
+        Lista de GlobalAuditLog
+    """
+    query = GlobalAuditLog.query
+
+    if action_filter:
+        query = query.filter(GlobalAuditLog.action == action_filter)
+
+    if negocio_id:
+        query = query.filter(GlobalAuditLog.negocio_id == negocio_id)
+
+    if user_id:
+        query = query.filter(GlobalAuditLog.user_id == user_id)
+
+    if date_from:
+        query = query.filter(GlobalAuditLog.timestamp >= date_from)
+
+    if date_to:
+        query = query.filter(GlobalAuditLog.timestamp <= date_to)
+
+    return query.order_by(GlobalAuditLog.timestamp.desc()).offset(offset).limit(limit).all()
+
+
+def get_global_audit_logs_count(action_filter=None, negocio_id=None,
+                                user_id=None, date_from=None, date_to=None):
+    """Cuenta el total de logs de auditoría global para paginación."""
+    query = GlobalAuditLog.query
+
+    if action_filter:
+        query = query.filter(GlobalAuditLog.action == action_filter)
+
+    if negocio_id:
+        query = query.filter(GlobalAuditLog.negocio_id == negocio_id)
+
+    if user_id:
+        query = query.filter(GlobalAuditLog.user_id == user_id)
+
+    if date_from:
+        query = query.filter(GlobalAuditLog.timestamp >= date_from)
+
+    if date_to:
+        query = query.filter(GlobalAuditLog.timestamp <= date_to)
 
     return query.count()

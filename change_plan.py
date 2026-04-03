@@ -3,8 +3,9 @@ Script para cambiar el plan, ciclo y fecha de vencimiento de un negocio.
 Actualizado para usar el sistema de suscripciones con plan_frecuencia y plan_vence.
 """
 from app import app, db
-from models import Negocio
+from models import Negocio, GlobalAuditAction
 from utils.subscription import actualizar_plan, plan_activo, dias_restantes_plan, formatear_tiempo_restante
+from decorators import log_global_audit
 from datetime import datetime, timezone
 
 def actualizar_suscripcion():
@@ -81,8 +82,26 @@ def actualizar_suscripcion():
 
         # 6. Actualizar usando la función de utilidad
         try:
+            plan_anterior = negocio.plan
+            ciclo_anterior = negocio.plan_frecuencia
+
             actualizar_plan(negocio, nuevo_plan, nuevo_ciclo)
             db.session.commit()
+
+            # Registrar en auditoría global
+            log_global_audit(
+                action=GlobalAuditAction.PLAN_CAMBIADO,
+                negocio_id=negocio.id,
+                entity_type='negocio',
+                entity_id=negocio.id,
+                description=f"Plan cambiado vía script: {plan_anterior} -> {nuevo_plan}",
+                details={
+                    'plan_anterior': plan_anterior,
+                    'ciclo_anterior': ciclo_anterior,
+                    'nuevo_plan': nuevo_plan,
+                    'nuevo_ciclo': nuevo_ciclo
+                }
+            )
 
             dias = dias_restantes_plan(negocio)
             tiempo = formatear_tiempo_restante(dias)
