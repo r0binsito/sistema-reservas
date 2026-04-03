@@ -136,6 +136,7 @@ def inject_plan_info():
         branding_info = {
             'mostrar_marca_reserfy': limites.get('marca_agua', True) if limites else True,
             'marca_personalizada': negocio.marca_agua_personalizada if plan == 'elite' and negocio.marca_agua_personalizada else None,
+            'marca_color': negocio.marca_agua_color if plan == 'elite' and negocio.marca_agua_color else None,
             'es_elite': plan == 'elite',
         }
 
@@ -203,8 +204,7 @@ def get_dashboard_stats(negocio_id):
     proxima_reserva = Reserva.query.filter(
         Reserva.negocio_id == negocio_id,
         Reserva.fecha_hora >= now_utc_naive,
-        Reserva.fecha_hora < hoy_fin_utc,
-        Reserva.estado != "cancelada"
+        Reserva.estado == "pendiente"
     ).order_by(Reserva.fecha_hora).first()
 
     if proxima_reserva:
@@ -250,30 +250,37 @@ def get_dashboard_stats(negocio_id):
     stats['top_servicios'] = [{'nombre': s[0], 'cantidad': s[1]} for s in top_servicios] if top_servicios else []
 
     # === CRECIMIENTO DE CLIENTES (Pro/Elite) ===
-    clientes_mes_actual = db.session.query(Cliente).filter(
-        Cliente.negocio_id == negocio_id
-    ).count()
+    # Contar clientes únicos con reservas este mes vs mes anterior
+    clientes_unicos_este_mes = db.session.query(func.count(func.distinct(Reserva.cliente_id))).filter(
+        Reserva.negocio_id == negocio_id,
+        Reserva.fecha_hora >= inicio_mes_utc,
+        Reserva.estado != "cancelada"
+    ).scalar() or 0
 
-    # Clientes del mes anterior (aproximación)
-    clientes_mes_anterior_query = db.session.query(func.count(Reserva.cliente_id.distinct())).filter(
+    clientes_unicos_mes_anterior = db.session.query(func.count(func.distinct(Reserva.cliente_id))).filter(
         Reserva.negocio_id == negocio_id,
         Reserva.fecha_hora >= inicio_mes_anterior_utc,
-        Reserva.fecha_hora < inicio_mes_utc
-    )
-    clientes_mes_anterior = max(0, clientes_mes_actual - clientes_mes_anterior_query.scalar())
+        Reserva.fecha_hora < inicio_mes_utc,
+        Reserva.estado != "cancelada"
+    ).scalar() or 0
 
-    if clientes_mes_anterior > 0:
-        stats['crecimiento_clientes'] = round(((clientes_mes_actual - clientes_mes_anterior) / clientes_mes_anterior) * 100)
+    # Calcular crecimiento: clientes únicos este mes vs mes anterior
+    if clientes_unicos_mes_anterior > 0:
+        crecimiento = ((clientes_unicos_este_mes - clientes_unicos_mes_anterior) / clientes_unicos_mes_anterior) * 100
+        stats['crecimiento_clientes'] = round(crecimiento)
+    elif clientes_unicos_este_mes > 0:
+        # Si no había clientes el mes anterior pero hay este mes, es crecimiento infinito, mostrar 100%
+        stats['crecimiento_clientes'] = 100
     else:
         stats['crecimiento_clientes'] = 0
 
-    # === INGRESOS DEL MES (Elite) ===
+    # === INGRESOS DEL MES (Elite) - Solo reservas completadas ===
     reservas_con_precio = db.session.query(
         Reserva.servicio,
         func.count(Reserva.id).label('cantidad')
     ).filter(
         Reserva.negocio_id == negocio_id,
-        Reserva.estado != "cancelada",
+        Reserva.estado == "completada",
         Reserva.fecha_hora >= inicio_mes_utc
     ).group_by(Reserva.servicio).all()
 
@@ -286,15 +293,15 @@ def get_dashboard_stats(negocio_id):
 
     stats['ingresos_mes'] = ingresos
 
-    # === TICKET PROMEDIO (Elite) ===
-    total_reservas_mes = Reserva.query.filter(
+    # === TICKET PROMEDIO (Elite) - Basado en completadas ===
+    reservas_completadas_mes = Reserva.query.filter(
         Reserva.negocio_id == negocio_id,
-        Reserva.estado != "cancelada",
+        Reserva.estado == "completada",
         Reserva.fecha_hora >= inicio_mes_utc
     ).count()
 
-    if total_reservas_mes > 0 and ingresos > 0:
-        stats['ticket_promedio'] = round(ingresos / total_reservas_mes)
+    if reservas_completadas_mes > 0 and ingresos > 0:
+        stats['ticket_promedio'] = round(ingresos / reservas_completadas_mes)
     else:
         stats['ticket_promedio'] = 0
 
@@ -305,6 +312,48 @@ def get_dashboard_stats(negocio_id):
         Reserva.fecha_hora < hoy_fin_utc,
         Reserva.estado != "cancelada"
     ).count()
+
+    # === RENDIMIENTO STAFF (Elite) ===
+    # Obtener empleados con sus reservas completadas del mes
+    empleados = Usuario.query.filter_by(negocio_id=negocio_id, is_active=True).all()
+
+    staff_stats = []
+    for empleado in empleados:
+        # Contar reservas completadas por este empleado en el mes
+        reservas_empleado = Reserva.query.filter(
+            Reserva.negocio_id == negocio_id,
+            Reserva.completado_por == empleado.id,
+            Reserva.estado == "completada",
+            Reserva.fecha_hora >= inicio_mes_utc
+        ).count()
+
+        # Calular ingresos generados por este empleado
+        servicios_empleado = db.session.query(
+            Reserva.servicio,
+            func.count(Reserva.id).label('cantidad')
+        ).filter(
+            Reserva.negocio_id == negocio_id,
+            Reserva.completado_por == empleado.id,
+            Reserva.estado == "completada",
+            Reserva.fecha_hora >= inicio_mes_utc
+        ).group_by(Reserva.servicio).all()
+
+        ingresos_empleado = 0
+        for s in servicios_empleado:
+            precio = servicios_precios.get(s.servicio, 0) or 0
+            ingresos_empleado += precio * s.cantidad
+
+        # Solo incluir empleados con actividad
+        if reservas_empleado > 0:
+            staff_stats.append({
+                'nombre': empleado.nombre or empleado.email.split('@')[0],
+                'reservas': reservas_empleado,
+                'ingresos': ingresos_empleado
+            })
+
+    # Ordenar por número de reservas
+    staff_stats.sort(key=lambda x: x['reservas'], reverse=True)
+    stats['staff_stats'] = staff_stats[:5]  # Top 5 empleados
 
     return stats
 
@@ -335,6 +384,23 @@ def hora_local(negocio, fecha_hora_utc):
     if fecha_hora_utc.tzinfo is None:
         fecha_hora_utc = pytz.utc.localize(fecha_hora_utc)
     return fecha_hora_utc.astimezone(tz)
+
+@app.template_filter('local_time')
+def local_time_filter(fecha_hora_utc):
+    """Convierte una fecha UTC a la timezone del negocio actual."""
+    if not fecha_hora_utc:
+        return fecha_hora_utc
+    try:
+        if current_user.is_authenticated and current_user.negocio:
+            tz = pytz.timezone(current_user.negocio.timezone)
+        else:
+            tz = pytz.timezone('America/Santo_Domingo')
+
+        if fecha_hora_utc.tzinfo is None:
+            fecha_hora_utc = pytz.utc.localize(fecha_hora_utc)
+        return fecha_hora_utc.astimezone(tz)
+    except:
+        return fecha_hora_utc
 
 
 
@@ -897,6 +963,11 @@ def perfil_negocio():
             if marca and len(marca) <= 200:
                 negocio.marca_agua_personalizada = marca
 
+            # Color de la marca de agua
+            marca_color = request.form.get("marca_agua_color")
+            if marca_color and marca_color.startswith("#") and len(marca_color) == 7:
+                negocio.marca_agua_color = marca_color
+
             # Guardar colores de marca personalizados (solo Elite)
             def validar_color_hex(color):
                 return color and color.startswith("#") and len(color) == 7
@@ -1402,6 +1473,9 @@ def obtener_slots_disponibles(negocio_id, fecha):
     if not horario:
         return []
 
+    # Hora actual en timezone del negocio
+    ahora_local = datetime.now(tz)
+
     slots = []
     hora_actual = datetime.combine(fecha, horario.hora_apertura)
     hora_cierre = datetime.combine(fecha, horario.hora_cierre)
@@ -1420,7 +1494,20 @@ def obtener_slots_disponibles(negocio_id, fecha):
     ).all()
 
     horas_ocupadas = [r.fecha_hora.replace(second=0, microsecond=0) for r in reservas_del_dia]
-    slots_disponibles = [(local, utc) for local, utc in slots if utc not in horas_ocupadas]
+
+    # Filtrar slots ya pasados (comparar en timezone local)
+    slots_disponibles = []
+    for local, utc in slots:
+        # Saltar slots ya ocupados
+        if utc in horas_ocupadas:
+            continue
+        # Saltar slots que ya pasaron (solo para el día de hoy)
+        if fecha == ahora_local.date():
+            # Crear datetime aware para comparar
+            slot_local_aware = tz.localize(local)
+            if slot_local_aware <= ahora_local:
+                continue
+        slots_disponibles.append((local, utc))
 
     return slots_disponibles
 
@@ -1446,8 +1533,9 @@ def enviar_email(destinatario, asunto, contenido_html):
 
 def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token, timezone="America/Santo_Domingo"):
     tz = pytz.timezone(timezone)
+    # Convertir de UTC a timezone local
     if fecha_hora.tzinfo is None:
-        fecha_hora_display = tz.localize(fecha_hora)
+        fecha_hora_display = pytz.utc.localize(fecha_hora).astimezone(tz)
     else:
         fecha_hora_display = fecha_hora.astimezone(tz)
 
@@ -1789,6 +1877,7 @@ def completar_reserva(reserva_id):
         negocio_id=current_user.negocio_id
     ).first_or_404()
     reserva.estado = "completada"
+    reserva.completado_por = current_user.id  # Registrar quién completó la reserva
     db.session.commit()
     return redirect(url_for("ver_reservas"))
 
@@ -1814,12 +1903,16 @@ def gestionar_reserva(token):
         else:
             mensaje = "Esta reserva ya estaba cancelada."
 
+    # Convertir fecha_hora a timezone local del negocio
+    fecha_hora_local = hora_local(negocio, reserva.fecha_hora)
+
     return render_template(
         "gestionar_reserva.html",
         reserva=reserva,
         negocio=negocio,
         cliente=cliente,
-        mensaje=mensaje
+        mensaje=mensaje,
+        fecha_hora_local=fecha_hora_local
     )
 
 # --- Manejadores de error ---
@@ -1856,6 +1949,11 @@ with app.app_context():
             pass
         try:
             conn.execute(db.text("ALTER TABLE negocio ADD COLUMN marca_agua_personalizada VARCHAR(200)"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(db.text("ALTER TABLE negocio ADD COLUMN marca_agua_color VARCHAR(7)"))
             conn.commit()
         except:
             pass
@@ -1940,6 +2038,18 @@ with app.app_context():
         try:
             conn.execute(db.text("CREATE INDEX IF NOT EXISTS idx_global_audit_negocio ON global_audit_log(negocio_id)"))
             conn.execute(db.text("CREATE INDEX IF NOT EXISTS idx_global_audit_timestamp ON global_audit_log(timestamp)"))
+            conn.commit()
+        except:
+            pass
+        # Columna completado_por en reserva para rastrear quién completó
+        try:
+            conn.execute(db.text("ALTER TABLE reserva ADD COLUMN completado_por INTEGER REFERENCES usuario(id)"))
+            conn.commit()
+        except:
+            pass
+        # Índice para completado_por
+        try:
+            conn.execute(db.text("CREATE INDEX IF NOT EXISTS idx_reserva_completado_por ON reserva(completado_por)"))
             conn.commit()
         except:
             pass

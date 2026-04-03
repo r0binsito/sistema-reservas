@@ -223,6 +223,7 @@
 {% set public_branding = {
     'mostrar_marca_reserfy': negocio.plan in ['starter', 'pro'],
     'marca_personalizada': negocio.marca_agua_personalizada if negocio.plan == 'elite' else None,
+    'marca_color': negocio.marca_agua_color if negocio.plan == 'elite' else None,
     'es_elite': negocio.plan == 'elite'
 } %}
 {% from "macros/watermark.html" import render_watermark %}

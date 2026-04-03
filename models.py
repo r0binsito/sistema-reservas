@@ -61,6 +61,7 @@ class Negocio(db.Model):
     plan_frecuencia = db.Column(db.String(20), default="mensual")  # 'mensual', 'anual', 'unico'
     plan_vence = db.Column(db.DateTime(timezone=True), nullable=True)  # Fecha de vencimiento del plan
     marca_agua_personalizada = db.Column(db.String(200), nullable=True)
+    marca_agua_color = db.Column(db.String(7), nullable=True)  # Color del texto de la marca de agua (hex)
     # Colores personalizados para plan Elite
     color_primario = db.Column(db.String(7), nullable=True)  # Color principal de botones (legacy)
     color_acento = db.Column(db.String(7), nullable=True)  # Color de acento: botones, iconos, pasos activos
@@ -90,6 +91,8 @@ class Reserva(db.Model):
     negocio_id = db.Column(db.Integer, db.ForeignKey("negocio.id"), nullable=False, index=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey("cliente.id"), nullable=False, index=True)
     token = db.Column(db.String(64), unique=True, nullable=True, default=lambda: str(uuid.uuid4()).replace("-", ""))
+    completado_por = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=True, index=True)  # Usuario que completó la reserva
+    usuario = db.relationship("Usuario", backref="reservas_completadas")
 
 class Usuario(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

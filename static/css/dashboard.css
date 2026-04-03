@@ -342,62 +342,90 @@
 .dashboard-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
     margin-bottom: 2rem;
 }
 
 .stat-card {
-    background: var(--bg-card);
+    background: linear-gradient(145deg, var(--bg-card) 0%, rgba(255,255,255,0.02) 100%);
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    padding: 1.25rem;
+    border-radius: 16px;
+    padding: 1.5rem;
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
     transition: all 0.3s ease;
 }
 
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 .stat-card:hover {
-    border-color: var(--border-primary);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: var(--secondary);
+    box-shadow: 0 8px 30px rgba(145, 42, 92, 0.1);
+    transform: translateY(-3px);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
 }
 
 .stat-card-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-default);
 }
 
 .stat-card-icon {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(145, 42, 92, 0.1), rgba(250, 143, 62, 0.1));
+    border-radius: 10px;
 }
 
 .stat-card-title {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .stat-card-body {
     display: flex;
     align-items: baseline;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 .stat-card-value {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 800;
     background: var(--gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    letter-spacing: -0.02em;
 }
 
 .stat-card-value-small {
     font-size: 1rem;
     font-weight: 600;
+    color: var(--text-primary);
 }
 
 .stat-card-limit {
@@ -413,77 +441,147 @@
 .stat-card-list {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
+}
+
+/* === STAFF PERFORMANCE ITEM === */
+.staff-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border-default);
+    gap: 1rem;
+}
+
+.staff-item:last-child {
+    border-bottom: none;
+}
+
+.staff-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.staff-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.staff-reservas {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg-base);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.staff-ingresos {
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 /* === TARJETAS BLOQUEADAS === */
 .stat-card-locked {
-    background: var(--bg-base);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
     position: relative;
+    overflow: hidden;
+    padding-bottom: 1.5rem;
+    min-height: 250px; /* AÑADIDO: Evita que el botón se corte al darle altura base a la tarjeta */
 }
 
-.stat-card-content-blurred {
-    filter: blur(6px);
-    -webkit-filter: blur(6px);
-    opacity: 0.4;
-    user-select: none;
-    pointer-events: none;
+.stat-card-locked .stat-card-header {
+    background: var(--bg-card);
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 0;
+    padding: 1rem 1.25rem 0.75rem 1.25rem;
+    border-bottom: none;
 }
 
 .locked-overlay {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.92);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius-lg);
+    justify-content: center; /* MODIFICADO: Centra el contenido verticalmente para mejor distribución */
+    background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.98) 100%);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border-radius: 16px;
     z-index: 10;
+    padding: 3.5rem 1.5rem 1.5rem 1.5rem; /* MODIFICADO: Ajusta el padding para dar aire sin apretar */
 }
 
 .locked-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 1rem;
+    justify-content: center;
     text-align: center;
+    width: 100%;
+    gap: 0.85rem; /* AÑADIDO: Fuerza una separación exacta entre título, badge y botón */
 }
 
 .locked-icon {
-    font-size: 2rem;
-    opacity: 0.7;
+    font-size: 2.25rem;
+    opacity: 0.9;
+    margin-bottom: 0; /* MODIFICADO: El gap ahora controla el espacio */
 }
 
-.locked-text {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    font-weight: 500;
+.locked-stat-name {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 0; /* MODIFICADO: El gap ahora controla el espacio */
+}
+
+.locked-plan-badge {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 50px;
+    background: linear-gradient(135deg, rgba(145, 42, 92, 0.1), rgba(250, 143, 62, 0.1));
+    color: var(--secondary);
+    font-weight: 600;
+    margin-bottom: 0.25rem; /* MODIFICADO: Pequeño respiro extra antes del botón */
 }
 
 .btn-upgrade-locked {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.4rem;
     background: var(--gradient);
     color: white;
-    padding: 0.6rem 1.25rem;
+    padding: 0.7rem 1.5rem;
     border-radius: 50px;
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 12px rgba(145, 42, 92, 0.3);
+    box-shadow: 0 3px 15px rgba(145, 42, 92, 0.35);
     border: none;
     cursor: pointer;
     font-family: inherit;
-}
-
-.btn-upgrade-locked:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 18px rgba(145, 42, 92, 0.4);
+    margin-top: 0; /* MODIFICADO: El gap ahora controla el espacio */
 }
 
 .btn-upgrade-elite {
@@ -492,8 +590,9 @@
     color: #1A1A1A;
     font-weight: 700;
     animation: shimmer-btn 3s linear infinite;
-    box-shadow: 0 2px 15px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 3px 20px rgba(255, 215, 0, 0.5);
 }
+
 
 @keyframes shimmer-btn {
     0% { background-position: 0% center; }

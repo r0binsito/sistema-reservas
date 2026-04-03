@@ -42,11 +42,11 @@
                 </div>
                 <div class="reserva-info-item">
                     <span class="reserva-info-label">📅 Fecha</span>
-                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%d/%m/%Y') }}</span>
+                    <span class="reserva-info-valor">{{ (r.fecha_hora | local_time).strftime('%d/%m/%Y') }}</span>
                 </div>
                 <div class="reserva-info-item">
                     <span class="reserva-info-label">🕐 Hora</span>
-                    <span class="reserva-info-valor">{{ r.fecha_hora.strftime('%I:%M %p') }}</span>
+                    <span class="reserva-info-valor">{{ (r.fecha_hora | local_time).strftime('%I:%M %p') }}</span>
                 </div>
             </div>
         </div>

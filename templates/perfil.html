@@ -127,6 +127,17 @@
                     </small>
                 </div>
 
+                <div class="form-grupo">
+                    <label>Color de la marca de agua</label>
+                    <div class="color-picker-wrap" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <input type="color" name="marca_agua_color" id="marca_color"
+                            value="{{ negocio.marca_agua_color or '#912A5C' }}"
+                            class="color-picker-input" style="width: 50px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
+                        <span class="color-picker-hex" id="hex_marca_color">{{ negocio.marca_agua_color or '#912A5C' }}</span>
+                        <small style="color:var(--text-muted); font-size:0.75rem;">Color del texto de tu marca</small>
+                    </div>
+                </div>
+
                 <!-- Panel de personalización de marca Elite -->
                 <div class="perfil-marca-panel">
                     <h4 class="perfil-marca-titulo">🎨 Personalización de Marca</h4>
@@ -326,6 +337,15 @@ function confirmarCropperPerfil() {
 
 // Color picker para Elite - Vista previa en tiempo real
 document.addEventListener('DOMContentLoaded', function() {
+    // Color de marca de agua
+    const marcaColorInput = document.getElementById('marca_color');
+    const marcaHexDisplay = document.getElementById('hex_marca_color');
+    if (marcaColorInput && marcaHexDisplay) {
+        marcaColorInput.addEventListener('input', function() {
+            marcaHexDisplay.textContent = this.value.toUpperCase();
+        });
+    }
+
     // Mapeo de inputs a elementos de preview
     const colorInputs = {
         'color_acento': {

@@ -4466,8 +4466,6 @@
     color: var(--text-primary);
 }
 
-/* ===== CLIENTES - BÚSQUEDA PREDICTIVA (ELITE) ===== */
-}
 
 /* ===== CLIENTES - BÚSQUEDA PREDICTIVA (ELITE) ===== */
 .clientes-header {
@@ -7248,10 +7246,10 @@ body:has(.watermark:not(.watermark-public)) main.contenedor {
 }
 
 .watermark-custom span {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-style: italic;
-    letter-spacing: 0.03em;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: inherit;
+    letter-spacing: 0.05em;
 }
 
 .watermark-custom.watermark-public {
@@ -7486,6 +7484,14 @@ body:has(.watermark:not(.watermark-public)) main.contenedor {
 
 .banner-plan-expired .banner-plan-btn:hover {
     background: rgba(239, 68, 68, 0.2);
+}
+
+.banner-plan-info .banner-plan-btn {
+    color: #16A34A;
+}
+
+.banner-plan-info .banner-plan-btn:hover {
+    background: rgba(34, 197, 94, 0.2);
 }
 
 /* ===== PÁGINA DE RESERVA PAUSADA ===== */
