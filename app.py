@@ -1547,6 +1547,92 @@ def slots_disponibles(slug):
         return jsonify({"slots": [], "error": str(e)})
 
 
+# --- Helper para días laborales ---
+def obtener_dias_laborales(negocio_id):
+    """
+    Obtiene los días laborales del negocio y retorna un texto legible.
+    Los días en la BD son: 0=Lunes, 1=Martes, ..., 6=Domingo
+    """
+    horarios = Horario.query.filter_by(negocio_id=negocio_id).order_by(Horario.dia_semana).all()
+
+    if not horarios:
+        return None
+
+    dias_nombres = {
+        0: 'Lunes', 1: 'Martes', 2: 'Miércoles',
+        3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+    }
+
+    dias_trabajados = [h.dia_semana for h in horarios]
+
+    # Si trabaja todos los días
+    if len(dias_trabajados) == 7:
+        return "Todos los días"
+
+    # Si trabaja de Lunes a Viernes
+    if dias_trabajados == [0, 1, 2, 3, 4]:
+        return "Lunes a Viernes"
+
+    # Si trabaja de Lunes a Sábado
+    if dias_trabajados == [0, 1, 2, 3, 4, 5]:
+        return "Lunes a Sábado"
+
+    # Caso general: listar los días
+    dias_texto = [dias_nombres[d] for d in dias_trabajados]
+
+    # Intentar comprimir rangos consecutivos
+    if len(dias_texto) > 2:
+        # Buscar rangos consecutivos
+        rangos = []
+        inicio = dias_trabajados[0]
+        fin = inicio
+
+        for i in range(1, len(dias_trabajados)):
+            if dias_trabajados[i] == fin + 1:
+                fin = dias_trabajados[i]
+            else:
+                if inicio == fin:
+                    rangos.append(dias_nombres[inicio])
+                else:
+                    rangos.append(f"{dias_nombres[inicio]} a {dias_nombres[fin]}")
+                inicio = fin = dias_trabajados[i]
+
+        # Agregar último rango
+        if inicio == fin:
+            rangos.append(dias_nombres[inicio])
+        else:
+            rangos.append(f"{dias_nombres[inicio]} a {dias_nombres[fin]}")
+
+        return ", ".join(rangos)
+
+    return ", ".join(dias_texto)
+
+
+def obtener_horario_texto(negocio_id):
+    """
+    Retorna el horario completo del negocio como texto.
+    Ejemplo: "Lunes a Viernes: 9:00 AM - 6:00 PM"
+    """
+    horarios = Horario.query.filter_by(negocio_id=negocio_id).order_by(Horario.dia_semana).all()
+
+    if not horarios:
+        return None
+
+    # Tomar el primer horario como referencia (asumiendo horarios uniformes)
+    primer_horario = horarios[0]
+    hora_apertura = primer_horario.hora_apertura.strftime('%I:%M %p').lstrip('0')
+    hora_cierre = primer_horario.hora_cierre.strftime('%I:%M %p').lstrip('0')
+
+    dias_texto = obtener_dias_laborales(negocio_id)
+
+    return {
+        'dias': dias_texto,
+        'apertura': hora_apertura,
+        'cierre': hora_cierre,
+        'completo': f"{dias_texto} • {hora_apertura} - {hora_cierre}"
+    }
+
+
 # --- Página pública de reservas ---
 @app.route("/b/<slug>", methods=["GET", "POST"])
 def reserva_publica(slug):
@@ -1610,9 +1696,20 @@ def reserva_publica(slug):
             ).first()
 
             if not cliente:
+                # Procesar teléfono: agregar +1 si no lo tiene
+                telefono = request.form.get("telefono_cliente", "").strip()
+                if telefono and not telefono.startswith("+"):
+                    # Limpiar el teléfono de espacios y guiones
+                    telefono_limpio = telefono.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+                    # Si tiene 10 dígitos, agregar +1
+                    if len(telefono_limpio) == 10 and telefono_limpio.isdigit():
+                        telefono = f"+1{telefono_limpio}"
+                    elif len(telefono_limpio) == 11 and telefono_limpio.startswith("1"):
+                        telefono = f"+{telefono_limpio}"
+
                 cliente = Cliente(
                     nombre=nombre_cliente,
-                    telefono=request.form.get("telefono_cliente", ""),
+                    telefono=telefono,
                     email=email_cliente,
                     negocio_id=negocio.id
                 )
@@ -1664,17 +1761,21 @@ def reserva_publica(slug):
             'gradiente_avatar_fin': negocio.gradiente_avatar_fin or '#FA8F3E',
         }
 
+    # Obtener información de horarios
+    horario_info = obtener_horario_texto(negocio.id)
+
     return render_template(
-    "reserva_publica.html",
-    negocio=negocio,
-    slots=slots,
-    mensaje=mensaje,
-    fecha_seleccionada=fecha_seleccionada,
-    servicio_seleccionado=servicio_seleccionado,
-    servicios=servicios,
-    now=datetime.now(),
-    colores_marca=colores_marca
-)
+        "reserva_publica.html",
+        negocio=negocio,
+        slots=slots,
+        mensaje=mensaje,
+        fecha_seleccionada=fecha_seleccionada,
+        servicio_seleccionado=servicio_seleccionado,
+        servicios=servicios,
+        now=datetime.now(),
+        colores_marca=colores_marca,
+        horario_info=horario_info
+    )
             
 # Auto-cancelar reservas después de 4 horas
 def auto_cancelar_reservas():
