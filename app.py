@@ -17,10 +17,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask_dance.consumer import oauth_authorized, oauth_error
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail as SGMail
 
 from models import db, Negocio, Cliente, Reserva, Usuario, Horario, Servicio, AuditLog, UserRole, AuditAction, GlobalAuditLog, GlobalAuditAction
+from emails import (
+    enviar_email,
+    enviar_confirmacion,
+    enviar_notificacion_negocio,
+    enviar_cancelacion_emails,
+    enviar_recordatorio
+)
 from decorators import requires_role, requires_admin, requires_plan, requires_active_plan, log_audit, can_user_manage_users, check_user_limit, requires_saas_admin, is_saas_admin, log_global_audit, get_global_audit_logs, get_global_audit_logs_count
 from utils.subscription import plan_activo, dias_restantes_plan, formatear_tiempo_restante, estado_plan
 
@@ -1511,151 +1516,9 @@ def obtener_slots_disponibles(negocio_id, fecha):
 
     return slots_disponibles
 
-MAIL_SENDER = os.getenv("MAIL_DEFAULT_SENDER")
+# Las funciones de envío de emails ahora están en emails.py
+# Importadas arriba: enviar_confirmacion, enviar_notificacion_negocio, enviar_cancelacion_emails, enviar_recordatorio
 
-def enviar_email(destinatario, asunto, contenido_html):
-    try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        mensaje = SGMail(
-            from_email=MAIL_SENDER,
-            to_emails=destinatario,
-            subject=asunto,
-            html_content=contenido_html
-        )
-        response = sg.send(mensaje)
-        print(f"✅ Email enviado: {response.status_code}")
-    except Exception as e:
-        print(f"Error completo: {e}")
-        if hasattr(e, 'body'):
-            print(f"Body: {e.body}")
-        if hasattr(e, 'status_code'):
-            print(f"Status: {e.status_code}")
-
-def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora, nombre_negocio, token, timezone="America/Santo_Domingo"):
-    tz = pytz.timezone(timezone)
-    # Convertir de UTC a timezone local
-    if fecha_hora.tzinfo is None:
-        fecha_hora_display = pytz.utc.localize(fecha_hora).astimezone(tz)
-    else:
-        fecha_hora_display = fecha_hora.astimezone(tz)
-
-    link_gestion = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reserva/{token}/gestionar"
-    enviar_email(
-        destinatario=email_cliente,
-        asunto=f"Reserva confirmada — {nombre_negocio}",
-        contenido_html=f"""
-            <h2>¡Tu reserva está confirmada!</h2>
-            <p>Hola <strong>{nombre_cliente}</strong>,</p>
-            <p>Tu cita ha sido agendada con éxito:</p>
-            <ul>
-                <li><strong>Negocio:</strong> {nombre_negocio}</li>
-                <li><strong>Servicio:</strong> {servicio}</li>
-                <li><strong>Fecha y hora:</strong> {fecha_hora_display.strftime('%d/%m/%Y a las %I:%M %p')}</li>
-            </ul>
-            <p>
-                <a href="{link_gestion}" style="background:#e74c3c;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;">
-                    Cancelar mi reserva
-                </a>
-            </p>
-            <p style="color:#888;font-size:12px;">O copia este link: {link_gestion}</p>
-        """
-    )
-
-def enviar_notificacion_negocio(negocio, cliente, reserva):
-    try:
-        tz = pytz.timezone(negocio.timezone)
-        if reserva.fecha_hora.tzinfo is None:
-            fecha_display = pytz.utc.localize(reserva.fecha_hora).astimezone(tz)
-        else:
-            fecha_display = reserva.fecha_hora.astimezone(tz)
-
-        enviar_email(
-            destinatario=negocio.email,
-            asunto=f"📅 Nueva reserva — {cliente.nombre}",
-            contenido_html=f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #912A5C, #FA8F3E); padding: 2rem; text-align: center; border-radius: 12px 12px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 1.5rem;">📅 Nueva Reserva</h1>
-                    <p style="color: rgba(255,255,255,0.85); margin: 0.5rem 0 0;">Tienes una nueva reserva en {negocio.nombre}</p>
-                </div>
-                <div style="background: #f8f8f8; padding: 2rem; border-radius: 0 0 12px 12px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">👤 Cliente</td>
-                            <td style="padding: 0.8rem 0; font-weight: 600; color: #1A1A1A;">{cliente.nombre}</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">📧 Email</td>
-                            <td style="padding: 0.8rem 0; color: #1A1A1A;">{cliente.email or '—'}</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">📞 Teléfono</td>
-                            <td style="padding: 0.8rem 0; color: #1A1A1A;">{cliente.telefono or '—'}</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">✂️ Servicio</td>
-                            <td style="padding: 0.8rem 0; font-weight: 600; color: #1A1A1A;">{reserva.servicio}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 0.8rem 0; color: #888; font-size: 0.9rem;">🗓️ Fecha y hora</td>
-                            <td style="padding: 0.8rem 0; font-weight: 600; color: #912A5C;">
-                                {fecha_display.strftime('%d/%m/%Y a las %I:%M %p')}
-                            </td>
-                        </tr>
-                    </table>
-                    <div style="margin-top: 1.5rem; text-align: center;">
-                        <a href="{os.getenv('BASE_URL', 'http://localhost:5000')}/reservas"
-                           style="background: linear-gradient(135deg, #912A5C, #FA8F3E); color: white; padding: 0.8rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 700;">
-                            Ver en el dashboard →
-                        </a>
-                    </div>
-                    <p style="color: #aaa; font-size: 0.78rem; text-align: center; margin-top: 1.5rem;">
-                        Este email fue enviado automáticamente por Reserfy
-                    </p>
-                </div>
-            </div>
-            """
-        )
-    except Exception as e:
-        print(f"Error enviando notificación al negocio: {e}")
-
-def enviar_cancelacion_emails(cliente, negocio, reserva):
-    if not cliente or not cliente.email:
-        return
-
-    # Email al cliente
-    enviar_email(
-        destinatario=cliente.email,
-        asunto=f"Reserva cancelada — {negocio.nombre}",
-        contenido_html=f"""
-            <h2>Tu reserva fue cancelada</h2>
-            <p>Hola <strong>{cliente.nombre}</strong>,</p>
-            <p>Tu reserva ha sido cancelada:</p>
-            <ul>
-                <li><strong>Negocio:</strong> {negocio.nombre}</li>
-                <li><strong>Servicio:</strong> {reserva.servicio}</li>
-                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %I:%M %p')}</li>
-            </ul>
-            <p>Puedes hacer una nueva reserva en cualquier momento.</p>
-        """
-    )
-
-    # Email al negocio
-    enviar_email(
-        destinatario=negocio.email,
-        asunto=f"Reserva cancelada — {cliente.nombre}",
-        contenido_html=f"""
-            <h2>Una reserva fue cancelada</h2>
-            <p>La siguiente reserva ha sido cancelada:</p>
-            <ul>
-                <li><strong>Cliente:</strong> {cliente.nombre}</li>
-                <li><strong>Email:</strong> {cliente.email}</li>
-                <li><strong>Servicio:</strong> {reserva.servicio}</li>
-                <li><strong>Fecha y hora:</strong> {reserva.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</li>
-            </ul>
-        """
-    )
-    
 @app.route("/b/<slug>/slots")
 def slots_disponibles(slug):
     from flask import jsonify
@@ -1823,8 +1686,42 @@ def auto_cancelar_reservas():
             db.session.commit()
             print(f"Auto-canceladas {len(reservas)} reservas")
 
+# Enviar recordatorios 24 horas antes de la cita
+def enviar_recordatorios_pendientes():
+    """Envía emails de recordatorio a clientes con citas programadas para mañana."""
+    with app.app_context():
+        ahora_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # Ventana: 23-25 horas desde ahora (aproximadamente mañana a esta hora)
+        ventana_inicio = ahora_utc + timedelta(hours=23)
+        ventana_fin = ahora_utc + timedelta(hours=25)
+
+        reservas = Reserva.query.filter(
+            Reserva.estado == 'pendiente',
+            Reserva.fecha_hora >= ventana_inicio,
+            Reserva.fecha_hora <= ventana_fin
+        ).all()
+
+        enviados = 0
+        for reserva in reservas:
+            try:
+                cliente = db.session.get(Cliente, reserva.cliente_id)
+                negocio = db.session.get(Negocio, reserva.negocio_id)
+
+                if cliente and cliente.email and negocio:
+                    resultado = enviar_recordatorio(cliente, negocio, reserva)
+                    if resultado:
+                        enviados += 1
+                        print(f"✅ Recordatorio enviado a {cliente.email}")
+            except Exception as e:
+                print(f"Error enviando recordatorio: {e}")
+
+        if enviados > 0:
+            print(f"📧 {enviados} recordatorios enviados")
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(auto_cancelar_reservas, 'interval', minutes=30)
+scheduler.add_job(enviar_recordatorios_pendientes, 'interval', hours=1)
 scheduler.start()
 
 # Ver reservas pendientes
