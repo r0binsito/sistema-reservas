@@ -215,7 +215,11 @@ def get_dashboard_stats(negocio_id):
     if proxima_reserva:
         cliente = db.session.get(Cliente, proxima_reserva.cliente_id)
         # Convertir hora a timezone local para mostrar
-        hora_local = pytz.utc.localize(proxima_reserva.fecha_hora).astimezone(tz_negocio)
+        fecha_hora = proxima_reserva.fecha_hora
+        if fecha_hora.tzinfo is None:
+            hora_local = pytz.utc.localize(fecha_hora).astimezone(tz_negocio)
+        else:
+            hora_local = fecha_hora.astimezone(tz_negocio)
         stats['proxima_cita'] = {
             'cliente': cliente.nombre if cliente else 'Cliente',
             'hora': hora_local.strftime('%I:%M %p'),
