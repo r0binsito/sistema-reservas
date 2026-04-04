@@ -1,450 +1,8 @@
+# -*- coding: utf-8 -*-
 """
 Plantillas de Email para Reserfy
-Diseño UI/UX moderno estilo SaaS con estructura HTML completa para evitar filtros de spam
+Diseño UI/UX moderno estilo SaaS compatible con mobile y todos los clientes de email
 """
-
-# ============================================================================
-# PLANTILLA BASE - Estructura común para todos los emails
-# ============================================================================
-
-BASE_EMAIL_TEMPLATE = """<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{{asunto}}</title>
-    <style type="text/css">
-        /* Reset de estilos para clientes de email */
-        body, table, td, a {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
-        table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
-        img {{ -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
-        table {{ border-collapse: collapse !important; }}
-        body {{ height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }}
-
-        /* Estilos base */
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f5;
-            margin: 0;
-            padding: 0;
-        }}
-
-        .email-container {{
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }}
-
-        .header {{
-            background: linear-gradient(135deg, #912A5C 0%, #FA8F3E 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }}
-
-        .header h1 {{
-            color: #ffffff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: 700;
-        }}
-
-        .header p {{
-            color: rgba(255, 255, 255, 0.9);
-            margin: 10px 0 0 0;
-            font-size: 16px;
-        }}
-
-        .body {{
-            padding: 40px 30px;
-            background-color: #ffffff;
-        }}
-
-        .body h2 {{
-            color: #1A1A1A;
-            font-size: 22px;
-            margin: 0 0 20px 0;
-            font-weight: 600;
-        }}
-
-        .body p {{
-            color: #4A4A4A;
-            font-size: 16px;
-            line-height: 1.6;
-            margin: 0 0 16px 0;
-        }}
-
-        .info-box {{
-            background-color: #f8f9fa;
-            border-left: 4px solid #912A5C;
-            padding: 20px;
-            margin: 25px 0;
-            border-radius: 8px;
-        }}
-
-        .info-row {{
-            display: table;
-            width: 100%;
-            margin-bottom: 15px;
-        }}
-
-        .info-row:last-child {{
-            margin-bottom: 0;
-        }}
-
-        .info-label {{
-            display: table-cell;
-            color: #6B7280;
-            font-size: 14px;
-            padding-right: 15px;
-            vertical-align: top;
-            width: 140px;
-        }}
-
-        .info-value {{
-            display: table-cell;
-            color: #1A1A1A;
-            font-size: 15px;
-            font-weight: 500;
-            vertical-align: top;
-        }}
-
-        .cta-button {{
-            display: inline-block;
-            background: linear-gradient(135deg, #912A5C 0%, #FA8F3E 100%);
-            color: #ffffff !important;
-            padding: 14px 32px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 16px;
-            margin: 25px 0;
-            text-align: center;
-        }}
-
-        .cta-button:hover {{
-            background: linear-gradient(135deg, #FA8F3E 0%, #912A5C 100%);
-        }}
-
-        .footer {{
-            background-color: #f8f9fa;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #e5e7eb;
-        }}
-
-        .footer p {{
-            color: #9CA3AF;
-            font-size: 13px;
-            margin: 0 0 10px 0;
-            line-height: 1.5;
-        }}
-
-        .footer a {{
-            color: #912A5C;
-            text-decoration: none;
-        }}
-
-        .footer a:hover {{
-            text-decoration: underline;
-        }}
-
-        .status-badge {{
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }}
-
-        .status-confirmed {{
-            background-color: #d1fae5;
-            color: #065f46;
-        }}
-
-        .status-cancelled {{
-            background-color: #fee2e2;
-            color: #991b1b;
-        }}
-
-        .status-reminder {{
-            background-color: #fef3c7;
-            color: #92400e;
-        }}
-
-        /* Responsive */
-        @media screen and (max-width: 600px) {{
-            .email-container {{
-                border-radius: 0 !important;
-            }}
-            .header {{
-                padding: 30px 20px !important;
-            }}
-            .body {{
-                padding: 30px 20px !important;
-            }}
-            .info-row {{
-                display: block;
-            }}
-            .info-label, .info-value {{
-                display: block;
-                width: 100% !important;
-            }}
-            .info-label {{
-                margin-bottom: 5px;
-            }}
-        }}
-    </style>
-</head>
-<body>
-    <div style="background-color:#f4f4f5;padding:20px;">
-        <table role="presentation" style="width:100%;border-collapse:collapse;">
-            <tr>
-                <td align="center">
-                    <!-- Contenido del email -->
-                    {{contenido}}
-                </td>
-            </tr>
-        </table>
-    </div>
-</body>
-</html>"""
-
-# ============================================================================
-# EMAIL DE CONFIRMACIÓN DE RESERVA
-# ============================================================================
-
-CONFIRMACION_TEMPLATE = """
-                    <div class="email-container">
-                        <div class="header">
-                            <h1>¡Reserva Confirmada!</h1>
-                            <p>Tu cita ha sido agendada con éxito</p>
-                        </div>
-                        <div class="body">
-                            <h2>Hola {nombre_cliente},</h2>
-                            <p>Gracias por reservar con nosotros. Tu cita ha sido confirmada exitosamente.</p>
-
-                            <div class="info-box">
-                                <div class="info-row">
-                                    <span class="info-label">🏢 Negocio:</span>
-                                    <span class="info-value"><strong>{nombre_negocio}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">✂️ Servicio:</span>
-                                    <span class="info-value"><strong>{servicio}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📅 Fecha:</span>
-                                    <span class="info-value"><strong>{fecha}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">🕐 Hora:</span>
-                                    <span class="info-value"><strong>{hora}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📍 Timezone:</span>
-                                    <span class="info-value">{timezone}</span>
-                                </div>
-                            </div>
-
-                            <p>Te esperamos puntualmente. Si necesitas cancelar o reprogramar, puedes hacerlo usando el botón de abajo.</p>
-
-                            <center>
-                                <a href="{link_gestion}" class="cta-button">Gestionar mi Reserva</a>
-                            </center>
-
-                            <p style="margin-top:25px;font-size:14px;color:#6B7280;">
-                                O copia este enlace en tu navegador:<br>
-                                <a href="{link_gestion}" style="color:#912A5C;">{link_gestion}</a>
-                            </p>
-                        </div>
-                        <div class="footer">
-                            <p><strong>{nombre_negocio}</strong></p>
-                            <p>Este email fue enviado automáticamente por Reserfy</p>
-                            <p style="font-size:12px;color:#9CA3AF;">
-                                ¿Tienes preguntas? Contáctanos directamente respondiendo este correo.
-                            </p>
-                        </div>
-                    </div>
-"""
-
-# ============================================================================
-# EMAIL DE CANCELACIÓN DE RESERVA
-# ============================================================================
-
-CANCELACION_TEMPLATE = """
-                    <div class="email-container">
-                        <div class="header" style="background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);">
-                            <h1>Reserva Cancelada</h1>
-                            <p>Tu reserva ha sido cancelada</p>
-                        </div>
-                        <div class="body">
-                            <h2>Hola {nombre_cliente},</h2>
-                            <p>Tu reserva ha sido cancelada exitosamente. A continuación encontrarás los detalles:</p>
-
-                            <div class="info-box" style="border-left-color: #DC2626;">
-                                <div class="info-row">
-                                    <span class="info-label">🏢 Negocio:</span>
-                                    <span class="info-value"><strong>{nombre_negocio}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">✂️ Servicio:</span>
-                                    <span class="info-value"><strong>{servicio}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📅 Fecha programada:</span>
-                                    <span class="info-value"><strong>{fecha}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">🕐 Hora programada:</span>
-                                    <span class="info-value"><strong>{hora}</strong></span>
-                                </div>
-                            </div>
-
-                            <p style="background-color:#fef3c7;padding:15px;border-radius:8px;margin:20px 0;">
-                                <strong>ℹ️ Información:</strong> Si cancelaste por error o deseas reagendar, puedes crear una nueva reserva en cualquier momento.
-                            </p>
-
-                            <center>
-                                <a href="{link_reserva}" class="cta-button" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
-                                    Agendar Nueva Cita
-                                </a>
-                            </center>
-                        </div>
-                        <div class="footer">
-                            <p><strong>{nombre_negocio}</strong></p>
-                            <p>Esperamos verte pronto</p>
-                            <p style="font-size:12px;color:#9CA3AF;">
-                                Este email fue enviado automáticamente por Reserfy
-                            </p>
-                        </div>
-                    </div>
-"""
-
-# ============================================================================
-# EMAIL DE RECORDATORIO (24 horas antes)
-# ============================================================================
-
-RECORDATORIO_TEMPLATE = """
-                    <div class="email-container">
-                        <div class="header" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
-                            <h1>Recordatorio de Cita</h1>
-                            <p>Tu cita es mañana</p>
-                        </div>
-                        <div class="body">
-                            <h2>Hola {nombre_cliente},</h2>
-                            <p>Este es un recordatorio amigable de tu próxima cita programada.</p>
-
-                            <div style="background-color:#ecfdf5;border:2px solid #059669;border-radius:12px;padding:25px;margin:25px 0;">
-                                <div style="text-align:center;margin-bottom:20px;">
-                                    <span class="status-badge status-reminder">🔔 Recordatorio</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">🏢 Negocio:</span>
-                                    <span class="info-value"><strong>{nombre_negocio}</strong></span>
-                                </div>
-                                <hr style="border:none;border-top:1px solid #d1fae5;margin:15px 0;">
-                                <div class="info-row">
-                                    <span class="info-label">✂️ Servicio:</span>
-                                    <span class="info-value"><strong>{servicio}</strong></span>
-                                </div>
-                                <hr style="border:none;border-top:1px solid #d1fae5;margin:15px 0;">
-                                <div class="info-row">
-                                    <span class="info-label">📅 Fecha:</span>
-                                    <span class="info-value"><strong>{fecha}</strong></span>
-                                </div>
-                                <hr style="border:none;border-top:1px solid #d1fae5;margin:15px 0;">
-                                <div class="info-row">
-                                    <span class="info-label">🕐 Hora:</span>
-                                    <span class="info-value"><strong>{hora}</strong></span>
-                                </div>
-                            </div>
-
-                            <p style="background-color:#f8f9fa;padding:15px;border-radius:8px;margin:20px 0;">
-                                <strong>💡 Tips:</strong><br>
-                                • Llega 5-10 minutos antes de tu hora programada<br>
-                                • Si necesitas cancelar, hazlo con al menos 24 horas de anticipación<br>
-                                • Trae cualquier referencia o instrucción especial si aplica
-                            </p>
-
-                            <center>
-                                <a href="{link_gestion}" class="cta-button" style="background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);">
-                                    Cancelar o Reprogramar
-                                </a>
-                            </center>
-                        </div>
-                        <div class="footer">
-                            <p><strong>{nombre_negocio}</strong></p>
-                            <p>¡Nos vemos pronto!</p>
-                            <p style="font-size:12px;color:#9CA3AF;">
-                                Este email fue enviado automáticamente por Reserfy
-                            </p>
-                        </div>
-                    </div>
-"""
-
-# ============================================================================
-# EMAIL DE NOTIFICACIÓN AL NEGOCIO (Nueva Reserva)
-# ============================================================================
-
-NOTIFICACION_NEGOCIO_TEMPLATE = """
-                    <div class="email-container">
-                        <div class="header">
-                            <h1>📅 Nueva Reserva</h1>
-                            <p>Tienes una nueva reserva en {nombre_negocio}</p>
-                        </div>
-                        <div class="body">
-                            <h2>Detalles del Cliente</h2>
-
-                            <div class="info-box">
-                                <div class="info-row">
-                                    <span class="info-label">👤 Nombre:</span>
-                                    <span class="info-value"><strong>{nombre_cliente}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📧 Email:</span>
-                                    <span class="info-value">{email_cliente}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📞 Teléfono:</span>
-                                    <span class="info-value">{telefono_cliente}</span>
-                                </div>
-                                <hr style="border:none;border-top:1px solid #e5e7eb;margin:15px 0;">
-                                <div class="info-row">
-                                    <span class="info-label">✂️ Servicio:</span>
-                                    <span class="info-value"><strong>{servicio}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">📅 Fecha:</span>
-                                    <span class="info-value"><strong>{fecha}</strong></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">🕐 Hora:</span>
-                                    <span class="info-value"><strong>{hora}</strong></span>
-                                </div>
-                            </div>
-
-                            <center>
-                                <a href="{link_dashboard}" class="cta-button">Ver en Dashboard →</a>
-                            </center>
-                        </div>
-                        <div class="footer">
-                            <p>Reserfy - Sistema de Reservas</p>
-                            <p style="font-size:12px;color:#9CA3AF;">
-                                Notificación automática generada por Reserfy
-                            </p>
-                        </div>
-                    </div>
-"""
-
-
-# ============================================================================
-# FUNCIONES DE ENVÍO DE EMAILS
-# ============================================================================
 
 import os
 import pytz
@@ -455,31 +13,107 @@ from sendgrid.helpers.mail import Mail as SGMail
 MAIL_SENDER = os.getenv("MAIL_DEFAULT_SENDER")
 
 
-def obtener_email_base():
-    """Retorna la plantilla base de email."""
-    return BASE_EMAIL_TEMPLATE
+# ============================================================================
+# PLANTILLA BASE - Estructura común para todos los emails
+# ============================================================================
 
+def _get_base_template():
+    return '''<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no, address=no, email=no, date=no">
+    <title>{{asunto}}</title>
+    <style type="text/css">
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; }
+        body { margin: 0; padding: 0; background-color: #f4f4f5; }
+        @media screen and (max-width: 600px) {
+            .email-container { width: 100% !important; }
+            .header-pad { padding: 25px 15px !important; }
+            .body-pad { padding: 20px 15px !important; }
+            .header-title { font-size: 20px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5;">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="email-container" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    {{contenido}}
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'''
+
+
+# ============================================================================
+# HELPERS - Componentes reutilizables
+# ============================================================================
+
+def _header(titulo, subtitulo, color1="#912A5C", color2="#FA8F3E"):
+    """Genera el header con gradiente."""
+    return f'''
+                    <tr>
+                        <td class="header-pad" style="background: linear-gradient(135deg, {color1} 0%, {color2} 100%); padding: 40px 30px; text-align: center;">
+                            <h1 class="header-title" style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">{titulo}</h1>
+                            <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">{subtitulo}</p>
+                        </td>
+                    </tr>'''
+
+
+def _footer(nombre_negocio="Reserfy"):
+    """Genera el footer."""
+    return f'''
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 600;">{nombre_negocio}</p>
+                            <p style="margin: 0; color: #9CA3AF; font-size: 12px;">Este email fue enviado automaticamente por Reserfy</p>
+                        </td>
+                    </tr>'''
+
+
+def _info_row(icono, label, valor):
+    """Genera una fila de información."""
+    return f'''
+                                            <tr>
+                                                <td width="40%" style="padding: 8px 0; color: #6B7280; font-size: 13px; vertical-align: top;">{icono} {label}</td>
+                                                <td width="60%" style="padding: 8px 0; color: #1A1A1A; font-size: 14px; font-weight: 500; vertical-align: top;">{valor}</td>
+                                            </tr>'''
+
+
+def _button(texto, link, color1="#912A5C", color2="#FA8F3E"):
+    """Genera un boton CTA."""
+    return f'''
+                    <tr>
+                        <td align="center" style="padding: 25px 30px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="background: linear-gradient(135deg, {color1} 0%, {color2} 100%); border-radius: 8px;">
+                                        <a href="{link}" style="display: inline-block; padding: 14px 28px; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none;">{texto}</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>'''
+
+
+# ============================================================================
+# FUNCIONES GENERADORAS DE EMAIL
+# ============================================================================
 
 def generar_email_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora_utc,
                                 nombre_negocio, token, timezone="America/Santo_Domingo"):
-    """
-    Genera el HTML para email de confirmación de reserva.
-
-    Args:
-        email_cliente: Email del cliente
-        nombre_cliente: Nombre del cliente
-        servicio: Nombre del servicio reservado
-        fecha_hora_utc: Fecha y hora en UTC (datetime object)
-        nombre_negocio: Nombre del negocio
-        token: Token único de la reserva para gestión
-        timezone: Timezone para mostrar la hora local
-
-    Returns:
-        str: HTML completo del email
-    """
+    """Genera el HTML para email de confirmacion de reserva."""
     tz = pytz.timezone(timezone)
 
-    # Convertir de UTC a timezone local
     if fecha_hora_utc.tzinfo is None:
         fecha_hora_display = pytz.utc.localize(fecha_hora_utc).astimezone(tz)
     else:
@@ -489,35 +123,49 @@ def generar_email_confirmacion(email_cliente, nombre_cliente, servicio, fecha_ho
     hora_str = fecha_hora_display.strftime('%I:%M %p')
     link_gestion = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reserva/{token}/gestionar"
 
-    contenido = CONFIRMACION_TEMPLATE.format(
-        nombre_cliente=nombre_cliente,
-        nombre_negocio=nombre_negocio,
-        servicio=servicio,
-        fecha=fecha_str,
-        hora=hora_str,
-        timezone=timezone,
-        link_gestion=link_gestion
+    info_rows = (
+        _info_row("Empresa", f"<strong>{nombre_negocio}</strong>", "") +
+        _info_row("Servicio", f"<strong>{servicio}</strong>", "") +
+        _info_row("Fecha", f"<strong>{fecha_str}</strong>", "") +
+        _info_row("Hora", f"<strong>{hora_str}</strong>", "")
     )
 
-    return BASE_EMAIL_TEMPLATE.replace("{{contenido}}", contenido).replace("{{asunto}}", f"Reserva Confirmada - {nombre_negocio}")
+    contenido = f'''
+                    {_header("Reserva Confirmada", "Tu cita ha sido agendada con exito")}
+                    <tr>
+                        <td class="body-pad" style="padding: 35px 30px; background-color: #ffffff;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 20px; font-weight: 600;">Hola {nombre_cliente},</h2>
+                            <p style="margin: 0 0 20px 0; color: #4A4A4A; font-size: 15px; line-height: 1.6;">Gracias por reservar con nosotros. Tu cita ha sido confirmada exitosamente.</p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #912A5C;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                            {info_rows}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 20px 0; color: #4A4A4A; font-size: 14px;">Te esperamos puntualmente. Si necesitas cancelar o reprogramar, usa el boton de abajo.</p>
+                        </td>
+                    </tr>
+                    {_button("Gestionar mi Reserva", link_gestion)}
+                    <tr>
+                        <td style="padding: 0 30px 25px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #6B7280;">
+                                O copia este enlace:<br>
+                                <a href="{link_gestion}" style="color: #912A5C; font-size: 11px; word-break: break-all;">{link_gestion}</a>
+                            </p>
+                        </td>
+                    </tr>
+                    {_footer(nombre_negocio)}'''
+
+    return _get_base_template().replace("{{contenido}}", contenido).replace("{{asunto}}", f"Reserva Confirmada - {nombre_negocio}")
 
 
 def generar_email_cancelacion(cliente, negocio, reserva, timezone="America/Santo_Domingo"):
-    """
-    Genera el HTML para email de cancelación de reserva.
-
-    Args:
-        cliente: Objeto Cliente con nombre y email
-        negocio: Objeto Negocio
-        reserva: Objeto Reserva con servicio y fecha_hora
-        timezone: Timezone para mostrar la hora local
-
-    Returns:
-        str: HTML completo del email
-    """
+    """Genera el HTML para email de cancelacion de reserva."""
     tz = pytz.timezone(timezone)
 
-    # Convertir fecha a timezone local
     if reserva.fecha_hora.tzinfo is None:
         fecha_hora_display = pytz.utc.localize(reserva.fecha_hora).astimezone(tz)
     else:
@@ -527,34 +175,49 @@ def generar_email_cancelacion(cliente, negocio, reserva, timezone="America/Santo
     hora_str = fecha_hora_display.strftime('%I:%M %p')
     link_reserva = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/b/{negocio.slug}"
 
-    contenido = CANCELACION_TEMPLATE.format(
-        nombre_cliente=cliente.nombre,
-        nombre_negocio=negocio.nombre,
-        servicio=reserva.servicio,
-        fecha=fecha_str,
-        hora=hora_str,
-        link_reserva=link_reserva
+    info_rows = (
+        _info_row("Empresa", f"<strong>{negocio.nombre}</strong>", "") +
+        _info_row("Servicio", f"<strong>{reserva.servicio}</strong>", "") +
+        _info_row("Fecha", f"<strong>{fecha_str}</strong>", "") +
+        _info_row("Hora", f"<strong>{hora_str}</strong>", "")
     )
 
-    return BASE_EMAIL_TEMPLATE.replace("{{contenido}}", contenido).replace("{{asunto}}", f"Reserva Cancelada - {negocio.nombre}")
+    contenido = f'''
+                    {_header("Reserva Cancelada", "Tu reserva ha sido cancelada", "#DC2626", "#991B1B")}
+                    <tr>
+                        <td class="body-pad" style="padding: 35px 30px; background-color: #ffffff;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 20px; font-weight: 600;">Hola {cliente.nombre},</h2>
+                            <p style="margin: 0 0 20px 0; color: #4A4A4A; font-size: 15px; line-height: 1.6;">Tu reserva ha sido cancelada exitosamente.</p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border-radius: 8px; border-left: 4px solid #DC2626;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                            {info_rows}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef3c7; border-radius: 8px; margin-top: 20px;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <p style="margin: 0; font-size: 13px; color: #92400e;">
+                                            <strong>Informacion:</strong> Si cancelaste por error, puedes crear una nueva reserva en cualquier momento.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {_button("Agendar Nueva Cita", link_reserva, "#059669", "#047857")}
+                    {_footer(negocio.nombre)}'''
+
+    return _get_base_template().replace("{{contenido}}", contenido).replace("{{asunto}}", f"Reserva Cancelada - {negocio.nombre}")
 
 
 def generar_email_recordatorio(cliente, negocio, reserva, timezone="America/Santo_Domingo"):
-    """
-    Genera el HTML para email de recordatorio (24h antes).
-
-    Args:
-        cliente: Objeto Cliente con nombre y email
-        negocio: Objeto Negocio
-        reserva: Objeto Reserva con servicio y fecha_hora
-        timezone: Timezone para mostrar la hora local
-
-    Returns:
-        str: HTML completo del email
-    """
+    """Genera el HTML para email de recordatorio (24h antes)."""
     tz = pytz.timezone(timezone)
 
-    # Convertir fecha a timezone local
     if reserva.fecha_hora.tzinfo is None:
         fecha_hora_display = pytz.utc.localize(reserva.fecha_hora).astimezone(tz)
     else:
@@ -564,34 +227,52 @@ def generar_email_recordatorio(cliente, negocio, reserva, timezone="America/Sant
     hora_str = fecha_hora_display.strftime('%I:%M %p')
     link_gestion = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reserva/{reserva.token}/gestionar"
 
-    contenido = RECORDATORIO_TEMPLATE.format(
-        nombre_cliente=cliente.nombre,
-        nombre_negocio=negocio.nombre,
-        servicio=reserva.servicio,
-        fecha=fecha_str,
-        hora=hora_str,
-        link_gestion=link_gestion
+    info_rows = (
+        _info_row("Empresa", f"<strong>{negocio.nombre}</strong>", "") +
+        _info_row("Servicio", f"<strong>{reserva.servicio}</strong>", "") +
+        _info_row("Fecha", f"<strong>{fecha_str}</strong>", "") +
+        _info_row("Hora", f"<strong>{hora_str}</strong>", "")
     )
 
-    return BASE_EMAIL_TEMPLATE.replace("{{contenido}}", contenido).replace("{{asunto}}", f"Recordatorio: Cita mañana - {negocio.nombre}")
+    contenido = f'''
+                    {_header("Recordatorio de Cita", "Tu cita es manana", "#059669", "#047857")}
+                    <tr>
+                        <td class="body-pad" style="padding: 35px 30px; background-color: #ffffff;">
+                            <h2 style="margin: 0 0 15px 0; color: #1A1A1A; font-size: 20px; font-weight: 600;">Hola {cliente.nombre},</h2>
+                            <p style="margin: 0 0 20px 0; color: #4A4A4A; font-size: 15px; line-height: 1.6;">Este es un recordatorio amigable de tu proxima cita programada.</p>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ecfdf5; border: 2px solid #059669; border-radius: 12px; margin: 20px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                            {info_rows}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #1A1A1A; font-weight: 600;">Tips:</p>
+                                        <p style="margin: 0; font-size: 13px; color: #4A4A4A; line-height: 1.6;">
+                                            - Llega 5-10 minutos antes<br>
+                                            - Cancela con 24h de anticipacion<br>
+                                            - Trae cualquier referencia especial
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {_button("Cancelar o Reprogramar", link_gestion, "#DC2626", "#991B1B")}
+                    {_footer(negocio.nombre)}'''
+
+    return _get_base_template().replace("{{contenido}}", contenido).replace("{{asunto}}", f"Recordatorio: Cita manana - {negocio.nombre}")
 
 
 def generar_email_notificacion_negocio(negocio, cliente, reserva, timezone="America/Santo_Domingo"):
-    """
-    Genera el HTML para notificación al negocio de nueva reserva.
-
-    Args:
-        negocio: Objeto Negocio
-        cliente: Objeto Cliente
-        reserva: Objeto Reserva
-        timezone: Timezone para mostrar la hora local
-
-    Returns:
-        str: HTML completo del email
-    """
+    """Genera el HTML para notificacion al negocio de nueva reserva."""
     tz = pytz.timezone(timezone)
 
-    # Convertir fecha a timezone local
     if reserva.fecha_hora.tzinfo is None:
         fecha_hora_display = pytz.utc.localize(reserva.fecha_hora).astimezone(tz)
     else:
@@ -601,32 +282,43 @@ def generar_email_notificacion_negocio(negocio, cliente, reserva, timezone="Amer
     hora_str = fecha_hora_display.strftime('%I:%M %p')
     link_dashboard = f"{os.getenv('BASE_URL', 'http://localhost:5000')}/reservas"
 
-    contenido = NOTIFICACION_NEGOCIO_TEMPLATE.format(
-        nombre_negocio=negocio.nombre,
-        nombre_cliente=cliente.nombre,
-        email_cliente=cliente.email or '—',
-        telefono_cliente=cliente.telefono or '—',
-        servicio=reserva.servicio,
-        fecha=fecha_str,
-        hora=hora_str,
-        link_dashboard=link_dashboard
+    info_rows = (
+        _info_row("Cliente", f"<strong>{cliente.nombre}</strong>", "") +
+        _info_row("Email", cliente.email or "-", "") +
+        _info_row("Telefono", cliente.telefono or "-", "") +
+        _info_row("Servicio", f"<strong>{reserva.servicio}</strong>", "") +
+        _info_row("Fecha", f"<strong>{fecha_str}</strong>", "") +
+        _info_row("Hora", f"<strong>{hora_str}</strong>", "")
     )
 
-    return BASE_EMAIL_TEMPLATE.replace("{{contenido}}", contenido).replace("{{asunto}}", f"📅 Nueva Reserva - {cliente.nombre}")
+    contenido = f'''
+                    {_header("Nueva Reserva", f"Tienes una nueva reserva en {negocio.nombre}")}
+                    <tr>
+                        <td class="body-pad" style="padding: 35px 30px; background-color: #ffffff;">
+                            <h2 style="margin: 0 0 20px 0; color: #1A1A1A; font-size: 18px; font-weight: 600;">Detalles del Cliente</h2>
+                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #912A5C;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                            {info_rows}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {_button("Ver en Dashboard", link_dashboard)}
+                    {_footer("Reserfy - Sistema de Reservas")}'''
 
+    return _get_base_template().replace("{{contenido}}", contenido).replace("{{asunto}}", f"Nueva Reserva - {cliente.nombre}")
+
+
+# ============================================================================
+# FUNCIONES DE ENVÍO
+# ============================================================================
 
 def enviar_email(destinatario, asunto, contenido_html):
-    """
-    Envía un email usando SendGrid con manejo robusto de errores.
-
-    Args:
-        destinatario: Email del destinatario
-        asunto: Asunto del email
-        contenido_html: Contenido HTML del email
-
-    Returns:
-        bool: True si se envió exitosamente, False en caso de error
-    """
+    """Envia un email usando SendGrid con manejo robusto de errores."""
     try:
         sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
         mensaje = SGMail(
@@ -636,10 +328,10 @@ def enviar_email(destinatario, asunto, contenido_html):
             html_content=contenido_html
         )
         response = sg.send(mensaje)
-        print(f"✅ Email enviado a {destinatario}: {response.status_code}")
+        print(f"Email enviado a {destinatario}: {response.status_code}")
         return True
     except Exception as e:
-        print(f"❌ Error enviando email a {destinatario}: {e}")
+        print(f"Error enviando email a {destinatario}: {e}")
         if hasattr(e, 'body'):
             print(f"   Body: {e.body}")
         if hasattr(e, 'status_code'):
@@ -649,7 +341,7 @@ def enviar_email(destinatario, asunto, contenido_html):
 
 def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora,
                        nombre_negocio, token, timezone="America/Santo_Domingo"):
-    """Envía email de confirmación al cliente."""
+    """Envia email de confirmacion al cliente."""
     html = generar_email_confirmacion(
         email_cliente=email_cliente,
         nombre_cliente=nombre_cliente,
@@ -661,27 +353,27 @@ def enviar_confirmacion(email_cliente, nombre_cliente, servicio, fecha_hora,
     )
     return enviar_email(
         destinatario=email_cliente,
-        asunto=f"Reserva Confirmada — {nombre_negocio}",
+        asunto=f"Reserva Confirmada - {nombre_negocio}",
         contenido_html=html
     )
 
 
 def enviar_notificacion_negocio(negocio, cliente, reserva):
-    """Envía notificación de nueva reserva al negocio."""
+    """Envia notificacion de nueva reserva al negocio."""
     try:
         html = generar_email_notificacion_negocio(negocio, cliente, reserva, negocio.timezone)
         return enviar_email(
             destinatario=negocio.email,
-            asunto=f"📅 Nueva Reserva — {cliente.nombre}",
+            asunto=f"Nueva Reserva - {cliente.nombre}",
             contenido_html=html
         )
     except Exception as e:
-        print(f"Error generando notificación al negocio: {e}")
+        print(f"Error generando notificacion al negocio: {e}")
         return False
 
 
 def enviar_cancelacion_emails(cliente, negocio, reserva):
-    """Envía emails de cancelación al cliente y al negocio."""
+    """Envia emails de cancelacion al cliente y al negocio."""
     resultados = {'cliente': False, 'negocio': False}
 
     if not cliente or not cliente.email:
@@ -692,7 +384,7 @@ def enviar_cancelacion_emails(cliente, negocio, reserva):
         html = generar_email_cancelacion(cliente, negocio, reserva, negocio.timezone)
         resultados['cliente'] = enviar_email(
             destinatario=cliente.email,
-            asunto=f"Reserva Cancelada — {negocio.nombre}",
+            asunto=f"Reserva Cancelada - {negocio.nombre}",
             contenido_html=html
         )
     except Exception as e:
@@ -703,7 +395,7 @@ def enviar_cancelacion_emails(cliente, negocio, reserva):
         html = generar_email_notificacion_negocio(negocio, cliente, reserva, negocio.timezone)
         resultados['negocio'] = enviar_email(
             destinatario=negocio.email,
-            asunto=f"Reserva Cancelada — {cliente.nombre}",
+            asunto=f"Reserva Cancelada - {cliente.nombre}",
             contenido_html=html
         )
     except Exception as e:
@@ -713,7 +405,7 @@ def enviar_cancelacion_emails(cliente, negocio, reserva):
 
 
 def enviar_recordatorio(cliente, negocio, reserva):
-    """Envía email de recordatorio 24 horas antes de la cita."""
+    """Envia email de recordatorio 24 horas antes de la cita."""
     if not cliente or not cliente.email:
         return False
 
@@ -721,7 +413,7 @@ def enviar_recordatorio(cliente, negocio, reserva):
         html = generar_email_recordatorio(cliente, negocio, reserva, negocio.timezone)
         return enviar_email(
             destinatario=cliente.email,
-            asunto=f"Recordatorio: Cita mañana — {negocio.nombre}",
+            asunto=f"Recordatorio: Cita manana - {negocio.nombre}",
             contenido_html=html
         )
     except Exception as e:
