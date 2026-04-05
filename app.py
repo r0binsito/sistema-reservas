@@ -500,6 +500,9 @@ def verificar_limite(negocio, tipo):
 # --- Index ---
 @app.route("/")
 def index():
+    # Redirigir al dashboard si el usuario está autenticado
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     return render_template("index.html")
 
 @app.route("/registro", methods=["GET", "POST"])
@@ -954,9 +957,10 @@ def logout():
     logout_user()
     return redirect(url_for("index"))
 
-# --- Perfil del negocio ---
+# --- Perfil del negocio (Solo administradores) ---
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
+@requires_role('admin')
 def perfil_negocio():
     negocio = current_user.negocio
     if request.method == "POST":

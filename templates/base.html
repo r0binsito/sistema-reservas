@@ -28,6 +28,317 @@
         }
     </style>
     {% endif %}
+
+    {# Estilos para navbar activo y dropdown de perfil #}
+    <style>
+        /* Enlace activo en el navbar */
+        .nav-links a.nav-active {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.1), rgba(250, 143, 62, 0.1));
+            color: #912A5C !important;
+            font-weight: 600;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .nav-links a.nav-active::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 2px;
+            background: linear-gradient(135deg, #912A5C, #FA8F3E);
+            border-radius: 2px;
+        }
+
+        /* BLOQUE DERECHO: Dropdown de Perfil */
+        .nav-perfil-dropdown {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .nav-perfil-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.08), rgba(250, 143, 62, 0.08));
+            border: 1px solid rgba(145, 42, 92, 0.2);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-perfil-btn:hover {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.15), rgba(250, 143, 62, 0.15));
+            border-color: #912A5C;
+        }
+
+        .nav-perfil-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #912A5C, #FA8F3E);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .nav-perfil-nombre {
+            color: #1A1A1A;
+            font-weight: 500;
+            font-size: 14px;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .nav-perfil-flecha {
+            color: #6B7280;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-perfil-dropdown.open .nav-perfil-flecha {
+            transform: rotate(180deg);
+        }
+
+        .nav-perfil-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            min-width: 180px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .nav-perfil-dropdown.open .nav-perfil-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-perfil-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #4A4A4A;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.15s ease;
+            border: none;
+        }
+
+        .nav-perfil-menu a:hover {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.08), rgba(250, 143, 62, 0.08));
+            color: #912A5C;
+        }
+
+        .nav-perfil-menu a.nav-active {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.12), rgba(250, 143, 62, 0.12));
+            color: #912A5C;
+        }
+
+        .nav-perfil-menu a svg {
+            flex-shrink: 0;
+        }
+
+        .nav-perfil-logout {
+            border-top: 1px solid #f0f0f0;
+            color: #DC2626 !important;
+        }
+
+        .nav-perfil-logout:hover {
+            background: #fef2f2 !important;
+            color: #DC2626 !important;
+        }
+
+        /* Hamburguesa posicionada a la derecha en móvil */
+        .nav-hamburguesa {
+            display: none;
+        }
+
+        /* Botones de autenticación (Vista pública - Desktop) */
+        .nav-auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .nav-auth-btn {
+            color: var(--text-secondary, #555);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-auth-btn:hover {
+            background: rgba(145, 42, 92, 0.08);
+            color: #912A5C;
+        }
+
+        .nav-auth-btn.nav-active {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.1), rgba(250, 143, 62, 0.1));
+            color: #912A5C;
+            font-weight: 600;
+        }
+
+        .nav-auth-btn-primary {
+            background: linear-gradient(135deg, #912A5C, #FA8F3E);
+            color: white !important;
+            border: none;
+            font-weight: 600;
+        }
+
+        .nav-auth-btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(145, 42, 92, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .nav-auth-btn-primary.nav-active {
+            background: linear-gradient(135deg, #FA8F3E, #912A5C);
+        }
+
+        /* Menú móvil público (colapsable) */
+        .nav-mobile-menu {
+            display: none;
+            flex-direction: column;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-mobile-menu.active {
+            max-height: 300px;
+        }
+
+        .nav-mobile-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1rem 1.5rem;
+            color: #4A4A4A;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .nav-mobile-link:last-child {
+            border-bottom: none;
+        }
+
+        .nav-mobile-link:hover {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.06), rgba(250, 143, 62, 0.06));
+            color: #912A5C;
+        }
+
+        .nav-mobile-link.nav-active {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.1), rgba(250, 143, 62, 0.1));
+            color: #912A5C;
+            font-weight: 600;
+        }
+
+        .nav-mobile-link svg {
+            flex-shrink: 0;
+        }
+
+        .nav-mobile-link-primary {
+            background: linear-gradient(135deg, rgba(145, 42, 92, 0.04), rgba(250, 143, 62, 0.04));
+            color: #912A5C;
+        }
+
+        .nav-mobile-link-primary:hover {
+            background: linear-gradient(135deg, #912A5C, #FA8F3E);
+            color: white !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .navbar {
+                flex-wrap: wrap;
+                padding: 0.8rem 1rem;
+            }
+
+            .nav-hamburguesa {
+                display: flex;
+                order: 3;
+            }
+
+            .nav-links {
+                order: 4;
+                width: 100%;
+                flex-direction: column;
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+                padding: 0;
+            }
+
+            .nav-links.active {
+                max-height: 500px;
+                padding: 1rem 0;
+            }
+
+            .nav-links a {
+                width: 100%;
+                text-align: center;
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-links a.nav-active::after {
+                display: none;
+            }
+
+            .nav-perfil-dropdown {
+                order: 2;
+            }
+
+            /* Ocultar botones desktop en móvil */
+            .nav-auth-buttons {
+                display: none;
+            }
+
+            /* Mostrar menú móvil público */
+            .nav-mobile-menu {
+                display: flex;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .nav-perfil-nombre {
+                display: none;
+            }
+
+            .nav-perfil-btn {
+                padding: 6px;
+            }
+        }
+    </style>
     {% block head_extra %}{% endblock %}
 </head>
 
@@ -50,36 +361,115 @@
 
     {% block navbar %}
     <nav class="navbar">
+        {# BLOQUE IZQUIERDO: Logo #}
         <a href="{{ url_for('index') }}" class="nav-brand">
             <img src="{{ url_for('static', filename='img/logo.png') }}" class="nav-logo" alt="Reserfy">
             <span class="nav-brand-text">Reserfy</span>
         </a>
-        <button class="nav-hamburguesa" id="nav-hamburguesa" aria-label="Menú">
+
+        {% if current_user.is_authenticated %}
+        {# ============ VISTA AUTENTICADA ============ #}
+
+        {# BLOQUE CENTRAL: Enlaces de navegación #}
+        <div class="nav-links" id="nav-links">
+            <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}nav-active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('ver_reservas') }}" class="{% if request.endpoint == 'ver_reservas' %}nav-active{% endif %}">Agenda</a>
+            {% if current_user.negocio.slug %}
+            <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}" class="{% if request.endpoint == 'reserva_publica' %}nav-active{% endif %}">Reservas</a>
+            {% endif %}
+            <a href="{{ url_for('ver_clientes') }}" class="{% if request.endpoint == 'ver_clientes' %}nav-active{% endif %}">Clientes</a>
+            <a href="{{ url_for('ver_servicios') }}" class="{% if request.endpoint == 'ver_servicios' %}nav-active{% endif %}">Servicios</a>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('ver_empleados') }}" class="{% if request.endpoint == 'ver_empleados' %}nav-active{% endif %}">Empleados</a>
+            {% endif %}
+            <a href="{{ url_for('configurar_horario') }}" class="{% if request.endpoint == 'configurar_horario' %}nav-active{% endif %}">Horario</a>
+        </div>
+
+        {# BLOQUE DERECHO: Menú de perfil #}
+        <div class="nav-perfil-dropdown" id="nav-perfil-dropdown">
+            <button type="button" class="nav-perfil-btn" id="nav-perfil-btn" aria-haspopup="true" aria-expanded="false">
+                <span class="nav-perfil-avatar">
+                    {% if current_user.nombre %}{{ current_user.nombre[0]|upper }}
+                    {% elif current_user.role == 'admin' %}A{% else %}U{% endif %}
+                </span>
+                <span class="nav-perfil-nombre">
+                    {% if current_user.role == 'admin' %}Admin
+                    {% elif current_user.nombre %}{{ current_user.nombre|truncate(15, true) }}
+                    {% else %}Usuario{% endif %}
+                </span>
+                <svg class="nav-perfil-flecha" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="nav-perfil-menu" id="nav-perfil-menu" role="menu">
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('perfil_negocio') }}" role="menuitem" class="{% if request.endpoint == 'perfil_negocio' %}nav-active{% endif %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Mi Perfil
+                </a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="nav-perfil-logout" role="menuitem">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Cerrar sesión
+                </a>
+            </div>
+        </div>
+
+        {# Hamburguesa para móvil #}
+        <button type="button" class="nav-hamburguesa" id="nav-hamburguesa" aria-label="Abrir menú" aria-expanded="false">
             <span></span>
             <span></span>
             <span></span>
         </button>
-        <div class="nav-links" id="nav-links">
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('ver_clientes') }}">Clientes</a>
-            {% if current_user.negocio.slug %}
-            <a href="{{ url_for('reserva_publica', slug=current_user.negocio.slug) }}">Reservas</a>
-            {% endif %}
-            <a href="{{ url_for('ver_servicios') }}">Servicios</a>
-            <a href="{{ url_for('ver_reservas') }}">Agenda</a>
-            <a href="{{ url_for('configurar_horario') }}">Horario</a>
-            {% if current_user.role == 'admin' %}
-            <a href="{{ url_for('ver_empleados') }}">Empleados</a>
-            {% endif %}
-            <a href="{{ url_for('perfil_negocio') }}">Perfil</a>
-            <a href="{{ url_for('logout') }}">Salir</a>
-            {% else %}
-            <a href="{{ url_for('login') }}">Iniciar sesión</a>
-            <a href="{{ url_for('registro') }}">Registrarse</a>
-            {% endif %}
+
+        {% else %}
+        {# ============ VISTA PÚBLICA (No autenticado) ============ #}
+
+        {# Botones visibles en desktop #}
+        <div class="nav-auth-buttons" id="nav-auth-buttons">
+            <a href="{{ url_for('login') }}" class="nav-auth-btn {% if request.endpoint == 'login' %}nav-active{% endif %}">Iniciar sesión</a>
+            <a href="{{ url_for('registro') }}" class="nav-auth-btn nav-auth-btn-primary {% if request.endpoint == 'registro' %}nav-active{% endif %}">Registrarse</a>
         </div>
+
+        {# Hamburguesa para móvil (vista pública) #}
+        <button type="button" class="nav-hamburguesa" id="nav-hamburguesa-public" aria-label="Abrir menú" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        {% endif %}
     </nav>
+
+    {# Menú móvil colapsable para vista pública #}
+    {% if not current_user.is_authenticated %}
+    <div class="nav-mobile-menu" id="nav-mobile-menu">
+        <a href="{{ url_for('login') }}" class="nav-mobile-link {% if request.endpoint == 'login' %}nav-active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            Iniciar sesión
+        </a>
+        <a href="{{ url_for('registro') }}" class="nav-mobile-link nav-mobile-link-primary {% if request.endpoint == 'registro' %}nav-active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="20" y1="8" x2="20" y2="14"></line>
+                <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+            Registrarse
+        </a>
+    </div>
+    {% endif %}
     {% endblock %}
 
     {% if current_user.is_authenticated %}
@@ -121,6 +511,117 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+
+    {# Script para el dropdown de perfil y menú hamburguesa #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // =====================
+            // DROPDOWN DE PERFIL
+            // =====================
+            const perfilBtn = document.getElementById('nav-perfil-btn');
+            const perfilDropdown = document.getElementById('nav-perfil-dropdown');
+            const perfilMenu = document.getElementById('nav-perfil-menu');
+
+            if (perfilBtn && perfilDropdown) {
+                perfilBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const isOpen = perfilDropdown.classList.contains('open');
+
+                    document.querySelectorAll('.nav-perfil-dropdown.open').forEach(function(dd) {
+                        dd.classList.remove('open');
+                    });
+
+                    if (!isOpen) {
+                        perfilDropdown.classList.add('open');
+                        perfilBtn.setAttribute('aria-expanded', 'true');
+                    } else {
+                        perfilBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (perfilDropdown && !perfilDropdown.contains(e.target)) {
+                        perfilDropdown.classList.remove('open');
+                        perfilBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && perfilDropdown) {
+                        perfilDropdown.classList.remove('open');
+                        perfilBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                if (perfilMenu) {
+                    perfilMenu.querySelectorAll('a').forEach(function(link) {
+                        link.addEventListener('click', function() {
+                            perfilDropdown.classList.remove('open');
+                            perfilBtn.setAttribute('aria-expanded', 'false');
+                        });
+                    });
+                }
+            }
+
+            // =====================
+            // MENÚ HAMBURGUESA - VISTA AUTENTICADA
+            // =====================
+            const hamburguesa = document.getElementById('nav-hamburguesa');
+            const navLinks = document.getElementById('nav-links');
+
+            if (hamburguesa && navLinks) {
+                hamburguesa.addEventListener('click', function() {
+                    const isOpen = navLinks.classList.contains('active');
+                    hamburguesa.classList.toggle('active');
+                    navLinks.classList.toggle('active');
+                    hamburguesa.setAttribute('aria-expanded', !isOpen);
+                });
+
+                navLinks.querySelectorAll('a').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        hamburguesa.classList.remove('active');
+                        navLinks.classList.remove('active');
+                        hamburguesa.setAttribute('aria-expanded', 'false');
+                    });
+                });
+            }
+
+            // =====================
+            // MENÚ HAMBURGUESA - VISTA PÚBLICA
+            // =====================
+            const hamburguesaPublic = document.getElementById('nav-hamburguesa-public');
+            const mobileMenu = document.getElementById('nav-mobile-menu');
+
+            if (hamburguesaPublic && mobileMenu) {
+                hamburguesaPublic.addEventListener('click', function() {
+                    const isOpen = mobileMenu.classList.contains('active');
+                    hamburguesaPublic.classList.toggle('active');
+                    mobileMenu.classList.toggle('active');
+                    hamburguesaPublic.setAttribute('aria-expanded', !isOpen);
+                });
+
+                mobileMenu.querySelectorAll('a').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        hamburguesaPublic.classList.remove('active');
+                        mobileMenu.classList.remove('active');
+                        hamburguesaPublic.setAttribute('aria-expanded', 'false');
+                    });
+                });
+
+                // Cerrar con Escape
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        hamburguesaPublic.classList.remove('active');
+                        mobileMenu.classList.remove('active');
+                        hamburguesaPublic.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
+    </script>
+
     {% block scripts_extra %}{% endblock %}
 </body>
 
