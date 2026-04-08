@@ -152,3 +152,105 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ===== DROPDOWN DE PERFIL Y MENÚ HAMBURGUESA (migrado desde base.html) =====
+document.addEventListener('DOMContentLoaded', function() {
+    // DROPDOWN DE PERFIL
+    const perfilBtn = document.getElementById('nav-perfil-btn');
+    const perfilDropdown = document.getElementById('nav-perfil-dropdown');
+    const perfilMenu = document.getElementById('nav-perfil-menu');
+
+    if (perfilBtn && perfilDropdown) {
+        perfilBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const isOpen = perfilDropdown.classList.contains('open');
+
+            document.querySelectorAll('.nav-perfil-dropdown.open').forEach(function(dd) {
+                dd.classList.remove('open');
+            });
+
+            if (!isOpen) {
+                perfilDropdown.classList.add('open');
+                perfilBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                perfilBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (perfilDropdown && !perfilDropdown.contains(e.target)) {
+                perfilDropdown.classList.remove('open');
+                perfilBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && perfilDropdown) {
+                perfilDropdown.classList.remove('open');
+                perfilBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        if (perfilMenu) {
+            perfilMenu.querySelectorAll('a').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    perfilDropdown.classList.remove('open');
+                    perfilBtn.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+    }
+
+    // MENÚ HAMBURGUESA - VISTA AUTENTICADA
+    const hamburguesa = document.getElementById('nav-hamburguesa');
+    const navLinks = document.getElementById('nav-links');
+
+    if (hamburguesa && navLinks) {
+        hamburguesa.addEventListener('click', function() {
+            const isOpen = navLinks.classList.contains('active');
+            hamburguesa.classList.toggle('active');
+            navLinks.classList.toggle('active');
+            hamburguesa.setAttribute('aria-expanded', !isOpen);
+        });
+
+        navLinks.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                hamburguesa.classList.remove('active');
+                navLinks.classList.remove('active');
+                hamburguesa.setAttribute('aria-expanded', 'false');
+            });
+        });
+    }
+
+    // MENÚ HAMBURGUESA - VISTA PÚBLICA
+    const hamburguesaPublic = document.getElementById('nav-hamburguesa-public');
+    const mobileMenu = document.getElementById('nav-mobile-menu');
+
+    if (hamburguesaPublic && mobileMenu) {
+        hamburguesaPublic.addEventListener('click', function() {
+            const isOpen = mobileMenu.classList.contains('active');
+            hamburguesaPublic.classList.toggle('active');
+            mobileMenu.classList.toggle('active');
+            hamburguesaPublic.setAttribute('aria-expanded', !isOpen);
+        });
+
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                hamburguesaPublic.classList.remove('active');
+                mobileMenu.classList.remove('active');
+                hamburguesaPublic.setAttribute('aria-expanded', 'false');
+            });
+        });
+
+        // Cerrar con Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hamburguesaPublic.classList.remove('active');
+                mobileMenu.classList.remove('active');
+                hamburguesaPublic.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+});

@@ -303,3 +303,22 @@ document.addEventListener('DOMContentLoaded', () => {
         formReserva.addEventListener('submit', guardarDatos);
     }
 });
+
+// ===== FORMATEAR TELÉFONO (migrado desde template) =====
+function formatearTelefono(input) {
+    let valor = input.value.replace(/\D/g, ''); // Solo números
+
+    // Limitar a 10 dígitos
+    if (valor.length > 10) {
+        valor = valor.substring(0, 10);
+    }
+
+    // Formatear: 809-555-1234
+    if (valor.length > 6) {
+        input.value = valor.substring(0, 3) + '-' + valor.substring(3, 6) + '-' + valor.substring(6);
+    } else if (valor.length > 3) {
+        input.value = valor.substring(0, 3) + '-' + valor.substring(3);
+    } else {
+        input.value = valor;
+    }
+}
