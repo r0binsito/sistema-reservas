@@ -38,8 +38,8 @@ cloudinary.config(
 )
 
 app = Flask(__name__)
-# Solo aplicar ProxyFix en producción (Railway)
-if os.getenv("RAILWAY_ENVIRONMENT"):
+# Después — funciona en Railway y Render
+if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER"):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -51,7 +51,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "reserfy-dev-key-2026")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False
+app.config["SESSION_COOKIE_SECURE"] = bool(
+    os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER"))
 app.config["WTF_CSRF_ENABLED"] = False  # ← AQUÍ
 
 # Google OAuth
